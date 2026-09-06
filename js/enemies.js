@@ -8,13 +8,13 @@
 
   /* ---------------- 敌人原型 ---------------- */
   /* 全怪物生命值整体倍率（含领主）。数值越大越硬。 */
-  const HP_SCALE = 10;   // 原 4.5 × 3
+  const HP_SCALE = 7.5;   // 原 4.5 × 3
   /* 全怪物伤害倍率（接触伤害、子弹、领主招式一并生效）。 */
   const DMG_SCALE = 1;
 
   /* 敌方弹幕的统一颜色。所有敌人（含领主）打出的子弹都用这一个颜色，
      这样玩家一眼就能认出「这是要躲的」，不会被我方的霓虹配色混淆。 */
-  const BULLET_COLOR = '#ff4a18';
+  const BULLET_COLOR = '#ff3700';
 
   const TYPES = {
     swarm: {
@@ -72,7 +72,7 @@
       shape: 'hex', color: '#9b6bff', mass: 2.4
     },
     boss: {
-      name: '领主', hp: 2600, speed: 64, dmg: 38, r: 42, xp: 110, armor: 14,
+      name: '领主', hp: 1800, speed: 64, dmg: 30, r: 42, xp: 110, armor: 14,
       shape: 'boss', color: '#ff3ec8', mass: 8, isBoss: true,
       ranged: true, range: 460, shootCd: 2.6, bulletSpeed: 195
     }
@@ -714,7 +714,7 @@
           T.add({
             shape: 'cone', follow: e, lockAngle: false,
             angle: U.angle(e.x, e.y, G.player.x, G.player.y),
-            spread: 1.9, len: 380, warn: 1.6, color: '#ff2d4d',
+            spread: 1.9, len: 380, warn: 2.5, color: '#ff2d4d',
             dmg: e.dmg * 1.25,
             onFire: (GG, c) => { done(); T.damageInCone(GG, c); }
           });
@@ -826,7 +826,7 @@
         cast(G, e, T, done) {
           e.skillCd = 5.6;
           T.add({
-            shape: 'circle', follow: e, radius: 340, warn: 1.7, color: '#ff2d4d',
+            shape: 'circle', follow: e, radius: 340, warn: 2.0, color: '#ff2d4d',
             dmg: e.dmg * 1.5,
             onFire: (GG, c) => { done(); T.damageInCircle(GG, c); }
           });
@@ -841,13 +841,13 @@
           for (let i = -1; i <= 1; i++) {
             T.add({
               shape: 'line', x: p.x - 700, y: p.y + i * 190,
-              angle: 0, len: 1400, width: 40, warn: 1.6, color: '#ff2d4d',
+              angle: 0, len: 1400, width: 40, warn: 2.0, color: '#ff2d4d',
               dmg: e.dmg * 1.2,
               onFire: (GG, c) => { done(); T.damageInLine(GG, c); }
             });
             T.add({
               shape: 'line', x: p.x + i * 190, y: p.y - 700,
-              angle: Math.PI / 2, len: 1400, width: 40, warn: 1.6, color: '#ff2d4d',
+              angle: Math.PI / 2, len: 1400, width: 40, warn: 2.0, color: '#ff2d4d',
               dmg: e.dmg * 1.2,
               onFire: (GG, c) => { done(); T.damageInLine(GG, c); }
             });
