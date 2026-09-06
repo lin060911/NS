@@ -1,373 +1,259 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="format-detection" content="telephone=no">
-    <meta name="theme-color" content="#b1e4b3">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>反向扫雷</title>
-    <link rel="icon" type="image/png" sizes="32 * 32" href="image/bomb.png">
-    <link rel="stylesheet" href="style.css">
-    <base target="_blank">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>霓虹幸存者 · Neon Survivor</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="app">
+  <canvas id="game"></canvas>
 
-    <div class="auto-modal-overlay" id="overlay"></div>
-
-    <button class="mode-toggle-btn" id="modeToggleBtn" onclick="togglePlaceMode()" title="点击切换放置方式">
-        <span class="mode-icon" id="modeToggleIcon">🖱️</span>
-        <span class="mode-label" id="modeToggleLabel">当前放置方式为：点选</span>
-    </button>
-
-    <div class="falling-container" id="fallingContainer"></div>
-    <div class="bg-effects" id="bgEffects">
-        <div class="bg-scan-trail"></div>
-        <div class="bg-scan-line"></div>
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="bars">
+        <div class="hp-bar"><div id="hpFill" class="hp-fill"></div><span id="hpText">100 / 100</span></div>
+        <div class="xp-bar"><div id="xpFill" class="xp-fill"></div></div>
+      </div>
+      <div class="stats">
+        <div id="timer" class="timer">00:00</div>
+        <div class="mini">等级 <b id="lvNum">1</b> · 击杀 <b id="killNum">0</b></div>
+      </div>
     </div>
 
-    <div class="auto-modal" id="welcomeModal">
-        <div class="icon">👋</div>
-        <h2>欢迎回来!</h2>
-        <p>欢迎回到<span>『反向💣扫雷』</span><br>如果忘了咋玩，可以点击左侧的规则哦( ´◡‿ゝ◡`)</p>
-        <button onclick="closeWelcomeModal()">(≧∇≦)ﾉ了解</button>
+    <div class="hud-bottom">
+      <div id="wpBar" class="chip-bar"></div>
+      <div id="psBar" class="chip-bar"></div>
     </div>
 
-    <div class="auto-modal" id="tutorialPrompt" style="display:none;">
-        <div class="icon">🤗</div>
-        <h2>你好!</h2>
-        <p>这是你第一次游玩<span>『反向💣扫雷』</span><br>先来试试<span>教学</span>模式吧！</p>
-        <button id="tutorialConfirmBtn" class="confirm-btn" onclick="openTeachMode()" disabled>开始教学<br>[GO!]ヾ(≧▽≦*)o</button>
-        <p style="font-size: 12px; color: #888; margin-top: 8px;" id="tutorialCountdown">按钮将在5秒后可用...</p>
+    <!-- 技能栏 -->
+    <div id="skillBar" class="skill-bar"></div>
+
+    <div id="bossWrap" class="boss-wrap hidden">
+      <div id="bossName" class="boss-name">◆ 领主 ◆</div>
+      <div class="boss-bar"><div id="bossFill"></div></div>
     </div>
 
-    <div class="auto-modal" id="tutorialCompleteModal" style="display:none;">
-        <div class="icon">🥳</div>
-        <h2>恭喜完成!</h2>
-        <p id="tutorialCompleteText">已完成该关卡</p>
-        <button onclick="closeTutorialComplete()">我真厉害<br>( *︾▽︾)</button>
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <!-- ============ 主菜单 ============ -->
+  <div id="screenMenu" class="screen">
+    <div class="panel menu-panel">
+      <h1 class="title">霓虹幸存者</h1>
+      <div class="subtitle">N E O N &nbsp; S U R V I V O R</div>
+      <p class="desc">
+        在无尽的数据荒原中活下来。<br>
+        武器会自动开火 —— 你只需要<strong>走位</strong>、<strong>融合</strong>、<strong>变强</strong>。
+      </p>
+
+      <div class="keys">
+        <div class="key-row"><span class="key">W A S D</span><span class="ktxt">移动</span></div>
+        <div class="key-row"><span class="key">鼠标左键 / 拖动</span><span class="ktxt">朝指针移动（手机可拖动）</span></div>
+        <div class="key-row"><span class="key">SPACE / Q / E</span><span class="ktxt">技能槽 1 / 2 / 3（装配见暂停菜单「技能」页）</span></div>
+        <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停（含键位与图鉴）</span></div>
+        <div class="key-row"><span class="key">M</span><span class="ktxt">开关音效</span></div>
+      </div>
+
+      <div id="bestBox" class="best-box">最佳记录：--</div>
+
+      <button id="btnStart" class="btn primary">开 始 游 戏</button>
+      <button id="btnHow" class="btn ghost">玩 法 说 明</button>
     </div>
+  </div>
 
-    <div class="auto-modal" id="moreTutorialGuide" style="display:none;">
-        <div class="icon">🧐</div>
-        <h2>更多关卡</h2>
-        <p>点击左侧💣炸弹信息栏<br>可开启更多系列关卡<br>通关后自动解锁该系列地雷！</p>
-        <button onclick="closeMoreTutorialGuide()">知道了</button>
-    </div>
-
-    <div class="auto-modal" id="presetLockedModal" style="display:none;">
-        <div class="icon">😣</div>
-        <h2>无法使用!</h2>
-        <p id="presetLockedText">需要在⚙️菜单中开启至少3个系列开关<br>才能使用预设难度哦！</p>
-        <button onclick="closePresetLockedModal()">知道了</button>
-    </div>
-
-    <div class="auto-modal" id="hellLockedModal" style="display:none;">
-        <div class="icon">👿</div>
-        <h2>地狱之门紧闭</h2>
-        <p>需要开启<b>全部5个</b>系列开关<br>才能挑战地狱难度！<br>当前已开启 <span id="hellLockedCount">0</span>/5 个</p>
-        <button onclick="closeHellLockedModal()">知道了</button>
-    </div>
-
-    <div class="auto-modal" id="brainUnlockedModal" style="display:none;">
-        <div class="icon">🤯</div>
-        <h2>脑王难度已开启</h2>
-        <p>您已自由出入地狱<br>诚邀您挑战<b>脑力之王</b>难度！</p>
-        <button onclick="closeBrainUnlockedModal()">迎接挑战 💪</button>
-    </div>
-
-    <div class="auto-modal" id="brainLockedModal" style="display:none;">
-        <div class="icon">😓</div>
-        <h2>脑王难度锁定中</h2>
-        <p>需要同时满足以下条件：<br>1️⃣ 地狱难度通关≥<b>10</b>次（当前 <span id="brainHellWins">0</span>/10）<br>2️⃣ 开启<b>全部5个</b>系列开关（当前 <span id="brainSeriesCount">0</span>/5）</p>
-        <button onclick="closeBrainLockedModal()">知道了</button>
-    </div>
-
-    <div class="brain-win-modal" id="brainWinModal" style="display:none;">
-        <div class="icon">🕶️</div>
-        <h2>哇，大佬!</h2>
-        <p>您通关了<b>脑王难度</b>！<br>这副大佬专属墨镜是您的了<br>但...这还不是理论难度极限...</p>
-        <button onclick="closeBrainWinModal()">收下墨镜 😎</button>
-    </div>
-
-    <h1 class="game-title">反向💣扫雷</h1>
-    <div class="rule">ℹ️操作tips:拖拽/点选✅放置地雷 | 🚫右键删除</div>
-
-    <div id="tutorialProgressBar">
-        <div class="progress-header">
-            <span class="progress-title" id="tutorialTitle">新手关卡</span>
-            <span class="progress-text" id="tutorialProgressText">0/5</span>
-        </div>
-        <div class="progress-track">
-            <div class="progress-fill" id="tutorialProgressFill"></div>
-        </div>
-    </div>
-
+  <!-- ============ 玩法说明 ============ -->
+  <div id="screenHow" class="screen hidden">
     <div class="panel">
-        <button id="reset">新游戏</button>
-        <button id="clear">清空放置</button>
-        <button id="createBtn" onclick="enterCreateMode()">创造✍️</button>
-        <button id="tutorialBtn" onclick="openTeachMode()">教学🧐</button>
+      <h2 class="ph">玩法说明</h2>
+      <ul class="howto">
+        <li><b>自动战斗</b>　武器自动瞄准开火，你只需要专注走位与躲避。</li>
+        <li><b>升级强化</b>　经验满格后，先在「获取弹珠 / 弹珠强化 / 被动强化」三类中选一类，再在该类中三选一。弹珠候选每次可刷新一次。</li>
+        <li><b>弹珠 = 弹道 + 特效</b>　7 种基础弹珠 = 4 种纯形态（飞镖 / 爆破 / 激光 / 追踪）+ 3 种自带特效（雪花→冰霜、毒气→剧毒、电弧→感电）。<b>同一种可以重复持有</b>。</li>
+        <li><b>单体与范围</b>　雪花弹、毒气弹是<b>单体</b>：命中一个目标就消失。想让冰霜 / 剧毒变成范围效果，得合成出<b>爆破形态</b>的霜系 / 毒系弹珠（如霜爆轰炸、毒爆轰炸）—— 爆破落点会留下冰面或毒云残留。</li>
+        <li><b>合成弹珠更强</b>　A 阶与 S 阶弹珠每件额外多打 <b>2 发</b>投射物，配色也略有区别。</li>
+        <li><b>合成</b>　同阶任意两颗都能合成，<b>顺序不影响产物</b>：B + B → A（28 种），A + A → S（23 种）。产物等级 = 两颗等级之和。</li>
+        <li><b>等级区间</b>　B 阶 1~3 · A 阶 2~6 · S 阶 4~12。特效在所有等级都生效，数值随等级提升。</li>
+        <li><b>主动技能</b>　每合成出一件 S 阶弹珠解锁对应技能，最多携带 3 个，在暂停菜单「技能」页装配。</li>
+        <li><b>敌人预警</b>　精英（金色）与领主出手前，地面会亮起图形并逐渐填满 —— <b class="danger">红色</b>是重伤，<b class="danger">紫色</b>是秒杀，看到就躲开。</li>
+        <li><b>生命晶体</b>　绿色十字，掉落率远低于经验晶体，拾取回血；残血时吸附范围自动扩大。续航主要靠被动「纳米修复」。</li>
+        <li><b>敌人</b>　除常规的虫群、执行体、追猎者外，还有会打弹幕的<b>散射体</b>（扇形）、<b>旋涡</b>（旋转弹幕）、<b>弹幕塔</b>（环形弹幕）、<b>狙击体</b>（蓄力高速弹），以及死亡会分裂的<b>裂变体</b>和高护甲的<b>壁垒</b>。</li>
+        <li><b>领主</b>　随血量切换战斗阶段，招式从扇形冲击波、环形弹幕、冲撞、十字激光、旋转扫射、地雷阵、激光网、追踪弹、召唤援军中随机抽取，越到后面出招越密。击破后掉落宝箱，可从<b>智库</b>（等级 +3，连选三次）/ <b>肉身</b>（伤害 +10%、生命 +30）/ <b>祝福</b>（随机一个未知特殊效果）中选一项。</li>
+        <li><b>目标</b>　存活 15 分钟并击败最终领主即通关，之后可选择进入无尽模式；死亡同样结算成绩。</li>
+      </ul>
+      <button id="btnHowBack" class="btn primary">返 回</button>
     </div>
+  </div>
 
-    <div class="timer-box" id="timer">00:00.00</div>
-
-    <div class="teach-progress-bar-inline" id="teachProgressBar" style="display:none;">
-        <span class="teach-progress-title" id="teachProgressTitle">教学进度</span>
-        <div class="teach-progress-track">
-            <div class="teach-progress-fill" id="teachProgressFill"></div>
-        </div>
-        <span class="teach-progress-text" id="teachProgressText">0/10</span>
+  <!-- ============ 升级选卡 ============ -->
+  <div id="screenLevel" class="screen hidden">
+    <div class="level-wrap">
+      <div id="levelTitle" class="level-title">强 化 协 议</div>
+      <div id="levelSub" class="level-sub">选择一项加载到你的系统中</div>
+      <div id="cardBox" class="card-box"></div>
+      <div id="rerollBox" class="reroll-box">
+        <button id="btnLoadout" class="btn ghost small">▤ 武备</button>
+        <button id="btnBackKind" class="btn ghost small hidden">← 返回事件选择</button>
+        <button id="btnReroll" class="btn ghost small hidden">↻ 刷新选项（本次升级限一次）</button>
+      </div>
     </div>
-    <div class="info">已放置：<span id="placed">0</span> / 总雷数：<span id="max">0</span></div>
-    <div id="board" class="board"></div>
+  </div>
 
-    <div class="teach-complete-modal" id="teachCompleteModal">
-        <div class="icon" id="teachCompleteIcon">🎉</div>
-        <h2 id="teachCompleteTitle">做得好！</h2>
-        <p id="teachCompleteText">你已完成本关教学！</p>
-        <div id="teachModalBtns">
-            <button id="teachNextBtn" onclick="teachNextLevel()">下一关 ➡️</button>
-            <button id="teachExitBtn" onclick="teachExit()" style="margin-left:10px;background:#e53e3e;color:#fff;">退出教学</button>
-            <button id="teachPracticeBtn" onclick="teachExitToPractice()" style="margin-left:10px;background:#4299e1;color:#fff;display:none;">📖 进入新手关卡</button>
-        </div>
+  <!-- ============ 武器融合 ============ -->
+  <div id="screenFusion" class="screen hidden">
+    <div class="level-wrap">
+      <div class="level-title">融 合 协 议</div>
+      <div class="level-sub">
+        只有<strong>同阶</strong>弹珠才能合成，点击两件即可配对，<strong>顺序不影响产物</strong>。<br>
+        产物等级 = 两颗等级之和（B 1~3 · A 2~6 · S 4~12）
+      </div>
+
+      <div class="fusion-slots">
+        <div id="fslot0" class="fslot empty"><div class="fslot-hint">基底</div></div>
+        <div class="fop">+</div>
+        <div id="fslot1" class="fslot empty"><div class="fslot-hint">材料</div></div>
+        <div class="fop">→</div>
+        <div id="fslotOut" class="fslot result empty"><div class="fslot-hint">产物</div></div>
+      </div>
+
+      <div id="fusionList" class="card-box"></div>
+
+      <div class="fusion-actions">
+        <button id="btnFuse" class="btn primary">确 认 融 合</button>
+        <button id="btnFuseSkip" class="btn ghost">暂 不 融 合</button>
+      </div>
+      <div class="fusion-tip">
+        消耗两件弹珠，产出一件更高阶的弹珠。<br>
+        具体产物由配方决定 —— 暂停菜单的<b>合成图鉴</b>可查看全部配方。
+      </div>
     </div>
+  </div>
 
-    <div class="create-mode-panel" id="createModePanel">
-        <div class="create-card">
-            <div class="create-card-title">
-                <span class="title-icon">📐</span> 棋盘尺寸
-            </div>
-            <div class="create-size-row">
-                <div class="create-size-field">
-                    <label>横·行数</label>
-                    <div class="create-size-control">
-                        <button class="create-size-btn minus" onclick="createSizeStep('rows',-1)">−</button>
-                        <input class="create-size-display" id="createSize" type="number" value="10" min="4" max="20" onchange="createSizeInput('rows',this.value)">
-                        <button class="create-size-btn plus" onclick="createSizeStep('rows',1)">+</button>
-                    </div>
-                </div>
-                <div class="create-size-x">×</div>
-                <div class="create-size-field">
-                    <label>竖·列数</label>
-                    <div class="create-size-control">
-                        <button class="create-size-btn minus" onclick="createSizeStep('cols',-1)">−</button>
-                        <input class="create-size-display" id="createSize2" type="number" value="10" min="4" max="20" onchange="createSizeInput('cols',this.value)">
-                        <button class="create-size-btn plus" onclick="createSizeStep('cols',1)">+</button>
-                    </div>
-                </div>
-            </div>
-            <div class="create-size-hint">范围 4~20 行/列</div>
-            <div class="create-error" id="createError"></div>
-            <div class="create-btn-group" style="margin-top:14px;">
-                <button class="create-btn" onclick="initCreateBoard()">🛠️ 生成空棋盘</button>
-            </div>
-        </div>
-
-        <div class="create-info-bar" id="createInfoBar" style="display:none;">
-            <span class="info-chip">棋盘 <strong id="infoRows">-</strong> 行 × <strong id="infoCols">-</strong> 列</span>
-            <span class="info-chip">已放地雷 <strong id="infoPlaced">0</strong></span>
-            <span class="info-chip">可用类型 <strong id="infoTypes">-</strong></span>
-        </div>
-
-        <div id="createBoardArea" style="position:relative;display:none;"></div>
-
-        <div id="createMineSlot" class="mine-slot-box" style="display:none;"></div>
-
-        <div class="create-card" id="createCodeCard" style="display:none;">
-            <div class="create-card-title">
-                <span class="title-icon">🔗</span>题库码
-            </div>
-            <div class="generate-code-area">
-                <button class="create-btn-primary" onclick="generatePuzzleCode()">🔧生成题库码</button>
-                <div class="code-output" id="puzzleCodeOutput">点击生成后显示</div>
-                <button class="share-btn" id="shareCodeBtn" onclick="copyPuzzleCode()" disabled>🤝分享</button><br>
-            </div>
-        </div>
-        <button class="back-btn" onclick="exitCreateMode()">🔙退出创造模式</button>
+  <!-- ============ 领主宝库 ============ -->
+  <div id="screenChest" class="screen hidden">
+    <div class="level-wrap">
+      <div class="level-title">领 主 宝 库</div>
+      <div class="level-sub">击败领主的馈赠 —— 选择一项专属奖励</div>
+      <div id="chestBox" class="card-box"></div>
+      <div class="reroll-box">
+        <button id="btnChestSkip" class="btn ghost small">跳过（放弃奖励）</button>
+      </div>
     </div>
+  </div>
 
-    <div class="mine-slot-box" id="slot">
-        <div class="teach-bubble" id="teachBubble">
-            <div class="teach-progress" id="teachProgress"></div>
-            <div class="teach-bubble-head">
-                <div class="teach-bubble-icon" id="teachBubbleIcon">📖</div>
-                <div class="teach-bubble-title" id="teachBubbleTitle">教学关卡</div>
-            </div>
-            <div class="teach-bubble-main">
-                <div class="teach-bubble-text" id="teachBubbleText">欢迎来到教学！</div>
-                <div class="teach-bubble-mines" id="teachBubbleMines"></div>
-            </div>
-            <div class="teach-bubble-hint" id="teachBubbleHint">按提示操作即可</div>
-        </div>
+  <!-- ============ 武备（升级 / 暂停时查看构筑）============ -->
+  <div id="screenLoadout" class="screen hidden loadout-screen">
+    <div class="panel loadout-panel">
+      <h2 class="ph">武 备</h2>
+      <div id="loadoutBox" class="tabpane"></div>
+      <button id="btnLoadoutClose" class="btn primary">返 回</button>
     </div>
+  </div>
 
-    <div class="preset-start-card" id="presetStartCard" style="display:none;">
-        <div class="preset-start-icon" id="presetStartIcon">😎</div>
-        <div class="preset-start-title" id="presetStartTitle">准备好了吗？</div>
-        <div class="preset-start-desc" id="presetStartDesc">点击开始后题目将展现并启动计时(≧▽≦)</div>
-        <button class="preset-start-btn" id="presetStartBtn" onclick="beginPresetGame()">开始</button>
-        <div class="preset-start-tag" id="presetStartTag"><span id="presetStartTagText">简单</span></div>
+  <!-- ============ 暂停（多标签）============ -->
+  <div id="screenPause" class="screen hidden">
+    <div class="panel pause-panel">
+      <h2 class="ph">已 暂 停</h2>
+
+      <div class="tabs">
+        <button id="btn-tabStatus" class="tab active">状态</button>
+        <button id="btn-tabKeys" class="tab">键位</button>
+        <button id="btn-tabRules" class="tab">规则</button>
+        <button id="btn-tabBuild" class="tab">构筑</button>
+        <button id="btn-tabSkills" class="tab">技能</button>
+        <button id="btn-tabCodex" class="tab">融合图鉴</button>
+      </div>
+
+      <div id="tabStatus" class="tabpane">
+        <div id="pauseStats" class="pause-stats"></div>
+      </div>
+
+      <div id="tabKeys" class="tabpane hidden">
+        <div class="keys compact">
+          <div class="key-row"><span class="key">W A S D</span><span class="ktxt">移动</span></div>
+          <div class="key-row"><span class="key">方向键</span><span class="ktxt">移动（同上）</span></div>
+          <div class="key-row"><span class="key">鼠标左键</span><span class="ktxt">按住时朝指针移动</span></div>
+          <div class="key-row"><span class="key">拖动屏幕</span><span class="ktxt">移动端移动</span></div>
+          <div class="key-row"><span class="key">SPACE</span><span class="ktxt">技能槽 1</span></div>
+          <div class="key-row"><span class="key">Q</span><span class="ktxt">技能槽 2</span></div>
+          <div class="key-row"><span class="key">E</span><span class="ktxt">技能槽 3</span></div>
+          <div class="key-row"><span class="key">R</span><span class="ktxt">咆哮（需宝箱祝福解锁，冷却 120 秒）</span></div>
+          <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停 / 继续（含键位、构筑与图鉴）</span></div>
+          <div class="key-row"><span class="key">M</span><span class="ktxt">开关音效</span></div>
+        </div>
+      </div>
+
+      <div id="tabRules" class="tabpane hidden">
+        <ul class="howto compact">
+          <li><b>升级</b>　每次升级两轮三选一：先在 <b>获取弹珠 / 弹珠强化 / 被动强化</b> 三类中选一类，
+            再在该类的 3 个候选中选 1 个。已无法强化的类会置灰并写明原因。</li>
+          <li><b>刷新</b>　只有「获取弹珠」提供刷新，且每次升级限一次；候选固定为 B 阶弹珠，<b>可重复获得同一种</b> —— 两颗同种 B 阶才能合成对应的 A 阶。</li>
+          <li><b>合成</b>　每 5 级获得 1 次机会。同阶任意两颗都能合成，<b>顺序不影响产物</b>，
+            产物等级 = 两颗等级之和（B 1~3 · A 2~6 · S 4~12）。</li>
+          <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态（飞镖 / 爆破 / 激光 / 追踪）+ 3 种自带特效（雪花→冰霜、毒气→剧毒、电弧→感电）。</li>
+          <li><b>进阶</b>　7 种基础弹珠两两组合（可相同）= 28 种 A 阶弹珠，每种组合对应唯一产物。</li>
+          <li><b>终极</b>　28 种 A 阶两两组合 = 406 条，按规则判定产出 23 种 S 阶弹珠，完整配方见「合成图鉴」。</li>
+          <li><b>技能</b>　每合成出一件 S 阶弹珠，解锁其专属技能，最多携带 3 个（SPACE / Q / E）。</li>
+          <li><b>预警</b>　精英与领主攻击前地面亮起图形，颜色填满即爆发。<b class="danger">红色</b>造成重伤，<b class="danger">紫色</b>是秒杀技 —— 必须躲开。</li>
+          <li><b>生命晶体</b>　绿色十字，掉落率极低，回血；残血时吸附范围更大。续航主要靠被动「纳米修复」。</li>
+          <li><b>领主宝库</b>　三选一：<b>智库</b>（等级 +3，随即连选三次）/ <b>肉身</b>（伤害 +10%、生命上限 +30 并立即回复等量）/ <b>祝福</b>（随机一个未知特殊效果）。</li>
+          <li><b>祝福</b>　共三种，每种只能获得一次：<b>血族</b>（击败敌人时小概率回血）/ <b>不灭</b>（免疫一次致命伤，留 1 点生命并进入 3 秒无敌；挡不住紫色秒杀技）/ <b>咆哮</b>（R 键，冷却 120 秒，清场并吸收所有经验球，领主除外）。</li>
+          <li><b>目标</b>　存活 15 分钟，击败最终领主即通关；可选择继续挑战进入无尽模式。</li>
+        </ul>
+      </div>
+
+      <div id="tabBuild" class="tabpane hidden"></div>
+      <div id="tabSkills" class="tabpane hidden"></div>
+      <div id="tabCodex" class="tabpane hidden"></div>
+
+      <button id="btnResume" class="btn primary">继 续</button>
+      <button id="btnQuit" class="btn ghost">放 弃 本 局</button>
     </div>
+  </div>
 
-    <div class="win" id="win">
-        <div>🎉 恭喜通关！</div>
-        <button onclick="newGame()">再来一局</button>
+  <!-- ============ 通关（可选择继续挑战）============ -->
+  <div id="screenWin" class="screen hidden">
+    <div class="panel">
+      <h2 id="winTitle" class="ph">通 关 达 成</h2>
+      <div id="winStats" class="over-stats"></div>
+      <p class="win-tip">
+        最终领主已被击溃。<br>
+        你可以保存成绩离开，也可以<strong class="danger">继续挑战</strong> ——
+        它会以更强的姿态归来，而这一次，<strong class="danger">它不会再倒下</strong>。
+      </p>
+      <button id="btnWinSave" class="btn primary">保 存 成 绩 并 退 出</button>
+      <button id="btnWinEndless" class="btn ghost danger">继 续 挑 战 · 无 尽 模 式</button>
     </div>
+  </div>
 
-    <div class="left-sidebar-container">
-        <button class="rule-sidebar-toggle" id="toggleRuleSidebar">📖规则</button>
-        <button class="info-sidebar-toggle" id="toggleInfoSidebar">💣信息</button>
+  <!-- ============ 结算 ============ -->
+  <div id="screenOver" class="screen hidden">
+    <div class="panel">
+      <h2 id="overTitle" class="ph">系 统 崩 溃</h2>
+      <div id="overStats" class="over-stats"></div>
+      <div id="overBest" class="best-box"></div>
+      <button id="btnAgain" class="btn primary">再 来 一 局</button>
+      <button id="btnMenu" class="btn ghost">返 回 主 菜 单</button>
     </div>
+  </div>
+</div>
 
-    <div class="rule-sidebar" id="ruleSidebar">
-        <div class="sidebar-section">
-            <div class="sidebar-title">📖 游戏规则</div>
-            <div class="rule-content">
-                <h3>💡 玩法：反向扫雷（布雷）</h3>
-                <ul>
-                    <li><strong>目标：</strong><br>在棋盘上放置规定数量的地雷（普通雷 + 特殊雷），使得棋盘上每个格子显示的数字，恰好等于它周围（或特定规则下）所有地雷对它的总影响值。</li>
-                    <li><strong>操作：</strong><br>点选：点击选中地雷，再点击棋盘放置<br>拖拽：左键拖拽放置地雷<br>右键删除。</li>
-                    <li><strong>胜利条件：</strong><br>所有地雷放完，且棋盘数字与地雷影响匹配（棋盘上都是🟩）。</li>
-                </ul>
-                <h3>🧩 地块状态解读</h3>
-                <p>游戏会根据你当前的布雷情况，实时用颜色提示每个格子：</p>
-                <ul>
-                    <li>🟩 合适：该格子的当前影响值 [等于] 显示数字（正确）。</li>
-                    <li>🟨 偏低：该格子的当前影响值 [小于] 显示数字（还需在周围加雷）。</li>
-                    <li>🟥 偏高：该格子的当前影响值 [大于] 显示数字（周围雷太多，需删除）。</li>
-                </ul>
-                <h3>🔓 系列开关机制</h3>
-                <ul>
-                    <li>基础系列始终开启</li>
-                    <li>其他系列需通过对应专项练习（5关）后自动解锁并开启</li>
-                    <li>简单/中等/困难：需开启≥3个系列开关</li>
-                    <li>地狱👿：需开启<b>全部</b>系列开关</li>
-                    <li>脑王🤯：地狱通关≥10次 + 全部系列开启</li>
-                    <li>🔧自由模式：可自定义参数+自由调整系列开关，不记录成绩</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="info-sidebar" id="infoSidebar">
-        <div class="sidebar-section">
-            <div class="sidebar-title">💣 炸弹信息</div>
-            <div id="mineInfoList"></div>
-        </div>
-    </div>
-
-    <button class="achievement-sidebar-toggle" id="toggleAchSidebar">📝记录</button>
-    <div class="achievement-sidebar" id="achSidebar">
-        <div class="achievement-stats" id="achStats">
-            <span class="stats-num" id="achUnlockedCount">0</span>
-            <span class="stats-label">/ <span id="achTotalCount">0</span>🏆 成就已解锁</span>
-        </div>
-        <div class="achievement-section" id="recSection">
-            <div class="achievement-section-title records-title">🥇 成绩</div>
-            <div id="achRecordList"></div>
-        </div>
-        <div class="achievement-section" id="achSection">
-            <div class="achievement-section-title">🏆 成就</div>
-            <div id="achList"></div>
-        </div>
-        <div class="sidebar-version">谢谢你玩[反向💣扫雷]<br>ヾ(•ω•`)o</div>
-    </div>
-
-    <div class="achievement-popup-overlay" id="achPopupOverlay">
-        <div class="achievement-popup" id="achPopup">
-            <div class="popup-emoji" id="popupEmoji">🏆</div>
-            <div class="popup-text">
-                <h3>🎉 成就解锁！</h3>
-                <div class="popup-name" id="popupName"></div>
-                <div class="popup-desc" id="popupDesc"></div>
-            </div>
-        </div>
-    </div>
-
-    <button class="sidebar-toggle" id="toggleSidebar">⚙️菜单</button>
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-section">
-            <div class="sidebar-title preset-title">🎯 难度选择</div>
-            <div class="preset-row">
-                <button class="preset-btn preset-easy" id="btnEasy" onclick="setPre('easy')">😎简单</button>
-                <button class="preset-btn preset-medium" id="btnMedium" onclick="setPre('medium')">😮中等</button>
-                <button class="preset-btn preset-hard" id="btnHard" onclick="setPre('hard')">😤困难</button>
-            </div>
-            <div class="preset-row">
-                <button class="preset-btn preset-hell" id="btnHell" onclick="setPre('hell')">👿地狱</button>
-                <button class="preset-btn preset-brain" id="btnBrain" onclick="setPre('brain')">🤯脑王</button>
-                <button class="preset-btn preset-free" id="btnFree" onclick="setPre('free')">🔧自由</button>
-            </div>
-
-            <div class="custom-panel" id="customPanel">
-            <div class="custom-item">
-                <label>棋盘大小</label>
-                <div class="num-control">
-                    <button class="num-btn" onclick="setVal('size',-1)">-</button>
-                    <div class="num-display" id="size">10</div>
-                    <button class="num-btn" onclick="setVal('size',1)">+</button>
-                </div>
-            </div>
-            <div class="custom-item">
-                <label>总地雷数</label>
-                <div class="num-control">
-                    <button class="num-btn" onclick="setVal('total',-1)">-</button>
-                    <div class="num-display" id="total">6</div>
-                    <button class="num-btn" onclick="setVal('total',1)">+</button>
-                </div>
-            </div>
-            <div class="custom-item">
-                <label>特殊雷种类</label>
-                <div class="num-control">
-                    <button class="num-btn" onclick="setVal('type',-1)">-</button>
-                    <div class="num-display" id="type">2</div>
-                    <button class="num-btn" onclick="setVal('type',1)">+</button>
-                </div>
-            </div>
-            <div class="custom-item">
-                <label>特殊雷总数</label>
-                <div class="num-control">
-                    <button class="num-btn" onclick="setVal('spec',-1)">-</button>
-                    <div class="num-display" id="spec">3</div>
-                    <button class="num-btn" onclick="setVal('spec',1)">+</button>
-                </div>
-            </div>
-            <button class="apply-btn" onclick="applySet()">应用设置</button>
-            </div>
-        </div>
-
-        <div class="sidebar-section">
-            <div class="sidebar-title lock-title">🔓 系列开关</div>
-            <div class="series-locked-notice" id="seriesLockedNotice">⚠️ 系列开关已锁定🔒，切换到<strong>[🔧自由]</strong>模式可重新调整</div>
-            <div id="seriesSwitchList"></div>
-            <div class="switch-hint" id="seriesSwitchHint">完成对应关卡可解锁系列</div>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title create-title">✍️ 创造工坊</div>
-            <div class="puzzle-input-group">
-                <input type="text" id="puzzleCodeInput" placeholder="粘贴题库码">
-                <button class="apply-input-btn" onclick="applyPuzzleCode()">应用</button>
-                <button class="clear-input-btn" onclick="clearPuzzleInput()">清空</button>
-            </div>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title record-title">🥇 成绩</div>
-            <div class="record-tip">在 [📝记录] 栏 查看每个难度的最佳成绩o((>ω< ))o</div>
-            <div id="recordList"></div>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title bgm-title">🔊 背景音乐</div>
-                <span class="value-display" id="bgmValue">50%</span>
-                <input type="range" min="0" max="100" value="50" class="bgm-slider" id="bgmSlider">
-        </div>
-    </div>
-
-    <footer class="sidebar-version">v1.0.0<br>© 2026 L1Nzy<br>lin060911@qq.com</footer>
-
-    <script src="audio.js"></script>
-    <script src="game.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/input.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/telegraph.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/weapons2.js"></script>
+<script src="js/fusions.js"></script>
+<script src="js/abilities.js"></script>
+<script src="js/upgrades.js"></script>
+<script src="js/player.js"></script>
+<script src="js/game.js"></script>
 </body>
 </html>
