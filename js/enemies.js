@@ -430,7 +430,8 @@
         burn: null, frozen: 0, frostStack: 0, slowT: 0,
         venomStack: 0, venomT: 0,
         paralyze: 0, armorBreak: 0, armorBreakT: 0,
-        phase2: false, dmgTaken: 0
+        phase2: false, dmgTaken: 0,
+        vuln: 0, vulnT: 0, dot: null, dotT: 0
       };
 
       if (!T.isBoss && time > 90 && Math.random() < Math.min(0.16, 0.03 + time / 900 * 0.13)) {
@@ -470,6 +471,8 @@
       e.xp = Math.round(e.xp * (1 + index * 0.5));
       this.list.push(e);
       G.boss = e;
+      if (!G.bosses) G.bosses = [];
+      G.bosses.push(e);
       Sfx.play('boss');
       FX.addShake(14);
       FX.ring(e.x, e.y, '#ff3ec8', 20, 190, 0.9, 5);
@@ -493,6 +496,8 @@
       this.list.push(e);
       G.boss = e;
       G.finalBoss = e;
+      if (!G.bosses) G.bosses = [];
+      G.bosses.push(e);
       Sfx.play('boss');
       FX.addShake(22);
       FX.ring(e.x, e.y, '#ff3ec8', 20, 280, 1.2, 6);
@@ -1019,6 +1024,9 @@
       opts = opts || {};
 
       amount *= global.Effects.stateMul(e);
+      if (e.vuln > 0) amount *= 1 + e.vuln;
+      const bl = G.player && G.player.blessing;
+      if (bl && bl.hunter) amount *= e.isBoss ? 1.2 : 0.85;
       if (e.armor > 0) {
         const eff = e.armor * (1 - (e.armorBreak || 0) * 0.16);
         amount *= 1 - Math.max(0, eff) / (Math.max(0, eff) + 46);

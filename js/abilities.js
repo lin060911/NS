@@ -146,13 +146,13 @@
     'frostbomb':   make('frostbomb',   '霜爆轰炸',     '◉', '#7ad7ff', 20, '毁灭轰炸，命中冻结',       bombard, 'frost'),
     'venombomb':   make('venombomb',   '毒爆轰炸',     '◉', '#9dff3c', 20, '毁灭轰炸，中毒持续伤害',   bombard, 'venom'),
     'boltbomb':    make('boltbomb',    '雷爆轰炸',     '◉', '#ffe14d', 20, '毁灭轰炸，感电麻痹',       bombard, 'shock'),
-    'frostray':    make('frostray',    '霜光横扫',     '═', '#7ad7ff', 16, '毁灭光束，命中冻结',       sweepBeam, 'frost'),
-    'venomray':    make('venomray',    '毒光横扫',     '═', '#9dff3c', 16, '毁灭光束，中毒持续伤害',   sweepBeam, 'venom'),
-    'boltray':     make('boltray',     '雷光横扫',     '═', '#ffe14d', 16, '毁灭光束，感电麻痹',       sweepBeam, 'shock'),
-    'frostsentry': make('frostsentry', '霜卫炮击',     '➤', '#7ad7ff', 15, '卫星炮击，命中冻结',       satellite, 'frost'),
-    'venomsentry': make('venomsentry', '毒卫炮击',     '➤', '#9dff3c', 15, '卫星炮击，中毒持续伤害',   satellite, 'venom'),
-    'boltsentry':  make('boltsentry',  '雷卫炮击',     '➤', '#ffe14d', 15, '卫星炮击，感电麻痹',       satellite, 'shock'),
-    'singularity': make('singularity', '奇点降临',     '◍', '#9b6bff', 22, '张开大黑洞，吸附并吞噬周围敌人', blackHole)
+    'frostray':    make('frostray',    '寂寒冲',     '═', '#7ad7ff', 16, '毁灭光束，命中冻结',       sweepBeam, 'frost'),
+    'venomray':    make('venomray',    '死灵哀',     '═', '#9dff3c', 16, '毁灭光束，中毒持续伤害',   sweepBeam, 'venom'),
+    'boltray':     make('boltray',     '天明闪',     '═', '#ffe14d', 16, '毁灭光束，感电麻痹',       sweepBeam, 'shock'),
+    'frostsentry': make('frostsentry', '霜雪寻踪',     '➤', '#7ad7ff', 15, '卫星炮击，命中冻结',       satellite, 'frost'),
+    'venomsentry': make('venomsentry', '基因锁定',     '➤', '#9dff3c', 15, '卫星炮击，中毒持续伤害',   satellite, 'venom'),
+    'boltsentry':  make('boltsentry',  '雷神锚点',     '➤', '#ffe14d', 15, '卫星炮击，感电麻痹',       satellite, 'shock'),
+    'singularity': make('singularity', '混沌降临',     '◍', '#9b6bff', 22, '张开大黑洞，吸附并吞噬周围敌人', blackHole)
   };
 
   const Abilities = {

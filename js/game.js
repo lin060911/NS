@@ -25,9 +25,9 @@
 
   const BLESSINGS = [
     {
-      id: 'vampire', name: '血族', icon: '❦', color: '#ff4d6d',
-      brief: '击败敌人有几率回血',
-      desc: '击败敌人时 <b>6%</b> 概率回复 <b>3</b> 点生命'
+      id: 'hunter', name: '猎人', icon: '✧', color: '#ff7a3d',
+      brief: '对领主伤害更高，对杂兵更低',
+      desc: '对<b>领主</b>伤害 <b>+20%</b>　·　对<b>其他敌人</b>伤害 <b>-15%</b>'
     },
     {
       id: 'undying', name: '不灭', icon: '✟', color: '#b14dff',
@@ -50,6 +50,7 @@
     damageDone: 0,
     pendingLevelUps: 0,
     boss: null,
+    bosses: [],
     bossQueue: 0,
     chests: [],
     gems: [],
@@ -144,6 +145,8 @@
       this.damageDone = 0;
       this.pendingLevelUps = 0;
       this.boss = null;
+      this.bosses = [];
+      this._bossSlots = null;
       this.bossQueue = 0;
       this.spawnAcc = 0;
       this.chests.length = 0;
@@ -156,6 +159,8 @@
       this.finalSpawned = false;
       this.finalBoss = null;
       this.finalBossDown = false;
+      this.bosses = [];
+      this._bossSlots = null;
       this.endlessStart = 0;
       this.roarCd = 0;
       Enemies.reset();
@@ -283,28 +288,79 @@
       Sfx.play('ui');
     },
 
+    specLines(spec) {
+      if (!spec) return [];
+      const out = [];
+      const pc = (v) => Math.round(v * 100) + '%';
+      if (spec.freeze) out.push('命中<b>冻结 ' + spec.freeze.toFixed(1) + ' 秒</b>（首领免疫）');
+      if (spec.vuln) out.push('易伤 <b>' + pc(spec.vuln[0]) + '</b>（首领 <b>' + pc(spec.vuln[1]) + '</b>）');
+      if (spec.dot) out.push('持续扣血 <b>' + pc(spec.dot) + '</b> / 命中伤害 · 持续 ' + (spec.dotT || 3) + ' 秒');
+      if (spec.para) out.push('麻痹 <b>' + spec.para.toFixed(1) + ' 秒</b>');
+      if (spec.chainOnHit) out.push('命中连锁 <b>' + spec.chainOnHit + '</b> 个敌人');
+      if (spec.branchChain) out.push('传导 <b>' + spec.branchChain[1] + '</b> 个 · 共 <b>' + spec.branchChain[0] + '</b> 次');
+      if (spec.pierceBoom) out.push('每次穿透<b>引发爆炸</b>');
+      if (spec.splitInto) out.push('爆炸后分裂 <b>' + spec.splitInto + '</b> 枚子弹');
+      if (spec.aoeSlow) out.push('范围减速 <b>' + spec.aoeSlow.toFixed(1) + ' 秒</b>');
+      if (spec.jumps) out.push('传导目标 <b>' + spec.jumps + '</b> 个');
+      if (spec.retarget) out.push('穿透后<b>追击下一个</b>敌人');
+      if (spec.pierce !== undefined && spec.pierce > 0) out.push('穿透 <b>' + spec.pierce + '</b> 个');
+      if (spec.speed) out.push('飞行速度 <b>' + Math.round(spec.speed) + '</b>');
+      if (spec.width) out.push('光束宽度 <b>' + Math.round(spec.width) + '</b>');
+      if (spec.blastR) out.push('爆炸半径 <b>' + Math.round(spec.blastR) + '</b>');
+      if (spec.big) out.push('<b>强化版</b> · 弹体与特效更大');
+      return out;
+    },
+
+    orbInfoHtml(id) {
+      const d = Weapons.defs[id];
+      const rows = [];
+      rows.push(['品阶', d.tierName + ' 阶 · 满级 Lv' + d.maxLevel]);
+      rows.push(['设计输出', '<b>' + Math.round(d.baseDps) + '</b> DPS · 间隔 ' + d.baseCd.toFixed(2) + ' 秒']);
+      const eff = d.effectIds.map((x) => Effects.name(x)).filter(Boolean);
+      rows.push(['属性', eff.length ? eff.join(' ＋ ') : '无属性']);
+      const spec = this.specLines(d.spec);
+      if (spec.length) rows.push(['特殊效果', spec.join('　·　')]);
+      const ab = Abilities.BIND[d.id] ? Abilities.defs[Abilities.BIND[d.id]] : null;
+      if (ab) rows.push(['主动技能', '<b>' + ab.name + '</b>（冷却 ' + ab.cd + ' 秒）　' + ab.brief]);
+      if (d.tier === 3) {
+        const rs = Fusions.recipesForS(d.id);
+        if (rs.length) {
+          rows.push(['配方', rs.slice(0, 3).map((r) =>
+            '<span class="rchip">' + r.ai + ' ' + r.a + '<span class="r-plus">＋</span>' +
+            r.bi + ' ' + r.b + '</span>').join('') +
+            (rs.length > 3 ? '<span class="rmore">… 共 ' + rs.length + ' 条</span>' : '')]);
+        }
+      }
+      if (d.tier === 2) {
+        const k = Weapons.TIER2.indexOf(d.id);
+        if (k >= 0) {
+          const r = Fusions.recipeForA(k);
+          rows.push(['配方', '<span class="rchip">' + r[0].icon + ' ' + r[0].name +
+            '<span class="r-plus">＋</span>' + r[1].icon + ' ' + r[1].name + '</span>']);
+        }
+      }
+      let h = '<div class="cx-body">';
+      for (const r of rows) {
+        h += '<div class="cx-row"><span class="cx-k">' + r[0] + '</span><span class="cx-v">' + r[1] + '</span></div>';
+      }
+      h += '<div class="cx-brief">' + d.brief + '</div>';
+      h += '</div>';
+      return h;
+    },
+
     buildCodex() {
       const aid = (k) => 'a' + String(k + 1).padStart(2, '0');
       const def = (id) => Weapons.defs[id];
       let ch = '';
 
-      ch += '<div class="build-note codex-lead">' +
-        '<b>三条规则</b><br>' +
-        '① 只有<b>同阶</b>能合成，<b>顺序不影响产物</b><br>' +
-        '② 产物等级 = 两颗之和，夹在该阶区间：B 1~3 · A 2~6 · S 4~12<br>' +
-        '③ 每 <b>' + FUSION_EVERY + '</b> 级获得 1 次合成机会' +
-        '</div>';
+      ch += '<div class="cx-rules">同阶才能合成，顺序不影响产物　·　产物等级 ＝ 两颗之和　·　每 ' +
+        FUSION_EVERY + ' 级获得 1 次合成机会</div>';
 
       const M1 = Fusions.matrix1();
       const B_IDS = Fusions.FORMS;
-      ch += '<div class="build-sec">';
-      ch += '<div class="build-h">一 · B + B → A' +
-        '<span class="bh-dim">7 种基础弹珠两两组合 = ' + M1.out.length + ' 种 A 阶</span></div>';
-      ch += '<div class="build-note">' +
-        '行、列 = 两颗材料，交叉格 = 产物。<b>高亮对角线</b>是同种弹珠合成，' +
-        '所以同一种 B 阶<b>要留两颗</b>。' +
-        '</div>';
-
+      ch += '<div class="cx-sec">';
+      ch += '<div class="cx-h">B ＋ B → A<span class="cx-dim">' + M1.out.length +
+        ' 种 · 对角线＝同种合成</span></div>';
       ch += '<div class="mx-wrap"><table class="mx">';
       ch += '<tr><th class="mx-cor">材料 ＼ 材料</th>';
       for (let j = 0; j < M1.size; j++) {
@@ -323,57 +379,52 @@
         }
         ch += '</tr>';
       }
-      ch += '</table></div>';
+      ch += '</table></div></div>';
 
-      ch += '<div class="build-h sub">A 阶 ' + M1.out.length + ' 件 · 配方</div>';
-      ch += '<div class="recipe-list">';
-      for (let k = 0; k < M1.out.length; k++) {
-        const d = def(aid(k));
-        const r = Fusions.recipeForA(k);
-        ch += '<div class="recipe-row">' +
-          '<span class="r-out" style="color:' + d.color + '">' + d.icon + ' ' + d.name + '</span>' +
-          '<span class="r-eq">＝</span>' +
-          '<span class="r-list">' + r[0].icon + ' ' + r[0].name +
-          '<span class="r-plus">＋</span>' + r[1].icon + ' ' + r[1].name + '</span>' +
-          '</div>';
-      }
-      ch += '</div></div>';
-
-      ch += '<div class="build-sec">';
-      ch += '<div class="build-h">二 · A + A → S' +
-        '<span class="bh-dim">28 种 A 阶两两组合 = 406 条 → ' +
-        Weapons.TIER3.length + ' 种 S 阶</span></div>';
-      ch += '<div class="build-note">' +
-        '不查表也能推：把两颗 A 各拆回两颗 B，共 <b>4 颗</b>，再看构成。' +
-        '并列时按「飞镖 &gt; 爆破 &gt; 激光 &gt; 追踪、雪花 &gt; 毒气 &gt; 电弧」取。' +
-        '</div>';
+      ch += '<div class="cx-sec">';
+      ch += '<div class="cx-h">A ＋ A → S<span class="cx-dim">' + Weapons.TIER3.length + ' 种</span></div>';
       ch += '<ol class="rule-list">' +
-        '<li>形态与特效都有、且没有任何一种凑到 2 颗 → <b>奇点</b></li>' +
+        '<li>形态与特效都有、且没有任一种凑到 2 颗 → <b>混沌产物</b></li>' +
         '<li>全是形态 → <b>加强形态</b>（取最多的形态）</li>' +
         '<li>全是特效 → 两种各 2 颗得 <b>效果对强化</b>，否则 <b>纯效果强化</b></li>' +
         '<li>特效 ≥ 3 颗 → <b>纯效果强化</b>（取最多的特效）</li>' +
-        '<li>其余 → <b>形态 + 特效</b>，形态为主</li>' +
-        '</ol>';
+        '<li>其余 → <b>形态 ＋ 特效</b>，形态为主</li>' +
+        '</ol></div>';
 
-      ch += '<div class="build-h sub">S 阶 ' + Weapons.TIER3.length + ' 件 · 配方</div>';
-      ch += '<div class="s-list">';
-      for (const id of Weapons.TIER3) {
-        const d = def(id);
-        const rs = Fusions.recipesForS(id);
-        ch += '<div class="s-item">' +
-          '<div class="s-head" style="color:' + d.color + '">' + d.icon +
-            ' <b>' + d.name + '</b>' +
-            '<span class="s-cnt">' + rs.length + ' 条</span>' +
-          '</div>' +
-          '<div class="s-rec">' +
-            rs.slice(0, 4).map((r) => '<span class="rchip">' + r.ai + ' ' + r.a +
-              '<span class="r-plus">＋</span>' + r.bi + ' ' + r.b + '</span>').join('') +
-            (rs.length > 4 ? '<span class="rmore">… 另有 ' + (rs.length - 4) + ' 条</span>' : '') +
-          '</div></div>';
+      const GROUPS = [
+        ['B 阶 · 基础弹珠', Weapons.TIER1],
+        ['A 阶', Weapons.TIER2],
+        ['S 阶', Weapons.TIER3]
+      ];
+      ch += '<div class="cx-sec"><div class="cx-h">弹珠图鉴<span class="cx-dim">点击展开</span></div>';
+      for (const g of GROUPS) {
+        ch += '<div class="cx-gh">' + g[0] + '</div><div class="cx-list">';
+        for (const id of g[1]) {
+          const d = def(id);
+          ch += '<div class="cx-item" data-orb="' + id + '">' +
+            '<div class="cx-head">' +
+              '<span class="cx-ic" style="color:' + d.color + '">' + d.icon + '</span>' +
+              '<span class="cx-name">' + d.name + '</span>' +
+              '<span class="cx-tier t' + d.tier + '">' + d.tierName + '</span>' +
+              '<span class="cx-eff">' +
+                (d.effectIds.length ? d.effectIds.map((x) => Effects.icon(x)).join('') : '—') +
+              '</span>' +
+              '<span class="cx-arrow">▾</span>' +
+            '</div>' + this.orbInfoHtml(id) + '</div>';
+        }
+        ch += '</div>';
       }
-      ch += '</div></div>';
+      ch += '</div>';
 
-      $('tabCodex').innerHTML = ch;
+      const box = $('tabCodex');
+      box.innerHTML = ch;
+      const items = box.querySelectorAll('.cx-item');
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          it.onclick = () => it.classList.toggle('open');
+        }
+      }
     },
 
     buildSkillsContent() {
@@ -742,8 +793,10 @@
 
     onBossDown(e) {
       Sfx.play('bossdown');
-      this.boss = null;
-      $('bossWrap').classList.add('hidden');
+      e.dead = true;
+      this.removeBossBar(e);
+      if (this.boss === e) this.boss = null;
+      this.updateBossHud();
       this.chests.push({ x: e.x, y: e.y });
       FX.addFlash(0.7);
       FX.addShake(18);
@@ -1142,13 +1195,15 @@
       const opts = [
         {
           id: 'codex', name: '智库', icon: '❖', color: '#38f0ff', tag: '智 库', tagCls: 't-up',
-          brief: '立刻提升三级',
-          detail: '等级 <b>+3</b>，马上再选 <b>3</b> 次强化'
+          brief: '所有弹珠升一级',
+          detail: p.weapons.length
+            ? '当前 <b>' + p.weapons.length + '</b> 件弹珠各升 <b>1</b> 级（满级的不再提升）'
+            : '当前没有弹珠可升级'
         },
         {
           id: 'flesh', name: '肉身', icon: '▣', color: '#ff7a3d', tag: '肉 身', tagCls: 't-new',
-          brief: '伤害 +10%，生命 +30',
-          detail: '伤害 <b>+10%</b> · 生命上限 <b>+30</b> 并回复等量'
+          brief: '伤害 +10%',
+          detail: '所有弹珠伤害 <b>+10%</b>，可重复叠加'
         },
         {
           id: 'blessing', name: '祝福', icon: '✧', color: '#ffc93c', tag: '祝 福', tagCls: 't-up',
@@ -1186,19 +1241,20 @@
     applyChestReward(id) {
       const p = this.player;
       if (id === 'codex') {
-        for (let i = 0; i < 3; i++) {
-          p.level++;
-          p.xpNext = Player.xpNeed(p.level);
+        let n = 0;
+        for (const w of p.weapons) {
+          const def = Weapons.defs[w.id];
+          if (!def || w.level >= def.maxLevel) continue;
+          w.level++;
+          n++;
         }
-        this.pendingLevelUps += 3;
         p.recalc();
-        this.toast('智 库 · 等 级 + 3');
+        this.refreshChips();
+        this.toast(n ? '智 库 · ' + n + ' 件 弹 珠 各 + 1 级' : '智 库 · 弹 珠 已 全 部 满 级');
       } else if (id === 'flesh') {
         p.dmgBonus = (p.dmgBonus || 0) + 0.10;
-        p.maxHpBonus = (p.maxHpBonus || 0) + 30;
         p.recalc();
-        p.hp = Math.min(p.maxHp, p.hp + 30);
-        this.toast('肉 身 · 伤 害 + 10%　生 命 + 30');
+        this.toast('肉 身 · 伤 害 + 10%');
       } else {
         const left = BLESSINGS.filter(b => !p.blessing[b.id]);
         if (!left.length) return;
@@ -1227,17 +1283,6 @@
       FX.burst(p.x, p.y, b.color, 40, { speed: 300, life: 0.9, size: 3.2 });
       FX.addFlash(0.5);
       Sfx.play('chest');
-    },
-
-    onEnemyKilled() {
-      const p = this.player;
-      if (!p || !p.blessing || !p.blessing.vampire) return;
-      if (Math.random() > 0.06) return;
-      const before = p.hp;
-      p.hp = Math.min(p.maxHp, p.hp + 2);
-      if (p.hp > before) {
-        FX.text(p.x, p.y - 30, '+' + Math.round(p.hp - before), '#ff4d6d', { size: 13, life: 0.7 });
-      }
     },
 
     useRoar() {
@@ -1364,23 +1409,74 @@
       $('killNum').textContent = this.kills;
       this.updateSkillHud();
 
-      if (this.boss && !this.boss.dead) {
-        const b = this.boss;
-        $('bossWrap').classList.remove('hidden');
+      this.updateBossHud();
+    },
+
+    removeBossBar(e) {
+      if (!e) return;
+      if (e._hudSlot) { e._hudSlot = null; }
+      const i = this.bosses.indexOf(e);
+      if (i >= 0) this.bosses.splice(i, 1);
+    },
+
+    updateBossHud() {
+      const wrap = $('bossWrap');
+      if (!wrap) return;
+      if (!this.bosses) this.bosses = [];
+      const list = this.bosses.filter(
+        (b) => b && !b.dead && b.hp > 0 && Enemies.list.indexOf(b) >= 0);
+      this.bosses = list;
+      list.sort((a, b) => (a.isFinal ? -1 : a.bossIndex) - (b.isFinal ? -1 : b.bossIndex));
+
+      if (!list.length) {
+        wrap.classList.add('hidden');
+        if (this._bossSlots) {
+          for (const el of this._bossSlots) el.style.display = 'none';
+        }
+        return;
+      }
+      wrap.classList.remove('hidden');
+      if (!this._bossSlots) this._bossSlots = [];
+      while (this._bossSlots.length < list.length) {
+        const el = document.createElement('div');
+        el.className = 'boss-slot';
+        const nm = document.createElement('div');
+        nm.className = 'boss-name';
+        const bar = document.createElement('div');
+        bar.className = 'boss-bar';
+        const fl = document.createElement('div');
+        fl.className = 'boss-fill';
+        bar.appendChild(fl);
+        el.appendChild(nm);
+        el.appendChild(bar);
+        el._nm = nm;
+        el._fl = fl;
+        wrap.appendChild(el);
+        this._bossSlots.push(el);
+      }
+
+      for (let i = 0; i < this._bossSlots.length; i++) {
+        const el = this._bossSlots[i];
+        const b = list[i];
+        if (!b) { el.style.display = 'none'; continue; }
+        el.style.display = '';
+        el.className = 'boss-slot' + (b.isFinal ? ' final' : '');
+        const nm = el._nm, fl = el._fl;
+        if (!nm || !fl) continue;
         if (b.phase2) {
           const pct = Enemies.phase2Pct(b);
-          $('bossFill').style.width = '100%';
-          $('bossFill').classList.add('infinite');
-          $('bossName').textContent = '◆ 领主 · 二阶段 ' + fmtPct(pct) + ' ◆';
-          $('bossName').classList.add('p2');
+          fl.style.width = '100%';
+          fl.className = 'boss-fill infinite';
+          nm.className = 'boss-name p2';
+          nm.textContent = '◆ 最 终 领 主 · 二阶段 ' + fmtPct(pct) + ' ◆';
         } else {
-          $('bossFill').classList.remove('infinite');
-          $('bossName').classList.remove('p2');
-          $('bossFill').style.width = U.clamp(b.hp / b.maxHp, 0, 1) * 100 + '%';
-          $('bossName').textContent = b.isFinal ? '◆ 最 终 领 主 ◆' : '◆ 领主 ◆';
+          fl.className = 'boss-fill';
+          nm.className = 'boss-name' + (b.isFinal ? ' final' : '');
+          const r = U.clamp(b.hp / b.maxHp, 0, 1);
+          fl.style.width = r * 100 + '%';
+          nm.textContent = (b.isFinal ? '◆ 最 终 领 主 ◆' : '◆ 领主 ' + (b.bossIndex + 1) + ' ◆') +
+            '　' + Math.ceil(r * 100) + '%';
         }
-      } else {
-        $('bossWrap').classList.add('hidden');
       }
     },
 

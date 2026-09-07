@@ -106,7 +106,7 @@
       if (this.pressed('a', 'arrowleft')) dx -= 1;
       if (this.pressed('d', 'arrowright')) dx += 1;
       if (this.pressed('w', 'arrowup')) dy -= 1;
-      if (this.pressed('s', 'arrowdown')) dy -= 1;
+      if (this.pressed('s', 'arrowdown')) dy += 1;
 
       if (dx === 0 && dy === 0) {
         if (this.wheel.active) {

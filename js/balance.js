@@ -21,7 +21,7 @@
     HP_CREEP_T: 120,
     HP_CREEP_D: 780,
     HP_CREEPEXP: 4.0,
-    HP_CREEPEXP2: 6.0,
+    HP_CREEPEXP2: 4.5,
     HP_END_A: 2.0,
     HP_END_B: 1.1,
 
@@ -34,8 +34,8 @@
     XP_P: 3.2200,
 
     BOSS_TIME_CAP: 600,
-    BOSS_HP_MUL: [1.93, 2.52, 2.51, 2.2, 2.97],
-    FINAL_HP_MUL: 2.61,
+    BOSS_HP_MUL: [4.87, 8.99, 8.79, 8.32, 11.31],
+    FINAL_HP_MUL: 19.07,
 
     ARMOR_CREEPEXP: 1.8,
     ARMOR_END: 1.2,

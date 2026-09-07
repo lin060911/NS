@@ -16,7 +16,7 @@
         const need = Math.max(2, Math.round(4 - pw * 2));
         if (e.frostStack >= need) {
           e.frostStack = 0;
-          e.frozen = Math.max(e.frozen || 0, 1.0 + pw * 1.4);
+          if (!e.isBoss) e.frozen = Math.max(e.frozen || 0, 1.0 + pw * 1.4);
           fx().ring(e.x, e.y, '#7ad7ff', 4, e.r * 3.2, 0.32, 3);
           fx().burst(e.x, e.y, '#7ad7ff', 8, { speed: 95, life: 0.42, size: 2.4 });
         }
@@ -109,6 +109,19 @@
       }
       if (e.slowT > 0) e.slowT -= dt;
 
+      if (e.vulnT > 0) {
+        e.vulnT -= dt;
+        if (e.vulnT <= 0) { e.vuln = 0; e.vulnT = 0; }
+      }
+      if (e.dot && e.dotT > 0) {
+        e.dotT -= dt;
+        E().damage(G, e, e.dot * dt, { silent: true });
+        if (Math.random() < dt * 6) {
+          fx().burst(e.x, e.y, '#9dff3c', 1, { speed: 20, life: 0.4, size: 2 });
+        }
+        if (e.dotT <= 0) { e.dot = 0; e.dotT = 0; }
+      }
+
       if (e.burn && e.burn.t > 0) {
         e.burn.t -= dt;
         E().damage(G, e, e.burn.dps * dt, { silent: true });
@@ -136,6 +149,36 @@
         if (e._frostDecay > 2.5) { e._frostDecay = 0; e.frostStack--; }
       }
       return stop;
+    },
+
+    vuln(e, normal, boss) {
+      if (!e || e.dead) return;
+      const v = e.isBoss ? boss : normal;
+      if (v > (e.vuln || 0)) e.vuln = v;
+      e.vulnT = Math.max(e.vulnT || 0, 3);
+    },
+
+    dot(e, dps, dur) {
+      if (!e || e.dead) return;
+      if (dps > (e.dot || 0)) e.dot = dps;
+      e.dotT = Math.max(e.dotT || 0, dur);
+    },
+
+    freeze(e, dur) {
+      if (!e || e.dead || e.isBoss) return;
+      e.frozen = Math.max(e.frozen || 0, dur);
+      fx().ring(e.x, e.y, '#7ad7ff', 4, e.r * 3.2, 0.32, 3);
+      fx().burst(e.x, e.y, '#7ad7ff', 10, { speed: 110, life: 0.5, size: 2.6 });
+    },
+
+    para(e, dur) {
+      if (!e || e.dead) return;
+      e.paralyze = Math.max(e.paralyze || 0, dur);
+    },
+
+    slow(e, dur) {
+      if (!e || e.dead || e.isBoss) return;
+      e.slowT = Math.max(e.slowT || 0, dur);
     },
 
     active(e) {

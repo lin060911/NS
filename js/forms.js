@@ -28,6 +28,10 @@
     }
   };
 
+  function beamLife(cd) {
+    return U.clamp((cd || 0.4) * 0.92, 0.18, 0.46);
+  }
+
   function residualFor(DEF, s) {
     const ids = (DEF.effectIds || []).slice(0, 2);
     const out = [];
@@ -63,8 +67,12 @@
           W().add({
             type: 'bolt', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: 6, dmg: s.dmg, pierce: s.pierce, hits: [],
+            r: (DEF.spec && DEF.spec.r) || 6, dmg: s.dmg,
+            pierce: s.pierce, hits: [],
             effects: DEF.effects, color: DEF.color,
+            shape: (DEF.spec && DEF.spec.shape) || 'bolt',
+            trail: DEF.spec && DEF.spec.trail,
+            spec: DEF.spec,
             life: 2.4, travel: 0, knock: s.knock
           });
         }
@@ -87,8 +95,9 @@
           W().add({
             type: 'shard', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: 8, dmg: s.dmg, pierce: 0, hits: [],
+            r: (DEF.spec && DEF.spec.r) || 8, dmg: s.dmg, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
+            shape: 'snow', spec: DEF.spec,
             life: 2.2, travel: 0, knock: s.knock
           });
         }
@@ -113,7 +122,13 @@
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
             r: 9, dmg: s.dmg, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
-            blastR: s.blastR, life: 1.4, travel: 0, knock: s.knock,
+            shape: (DEF.spec && DEF.spec.shape) || 'orb',
+            trail: DEF.spec && DEF.spec.trail,
+            spec: DEF.spec,
+            splitInto: DEF.spec && DEF.spec.splitInto,
+            splitMul: DEF.spec && DEF.spec.splitMul,
+            blastR: s.blastR, life: (DEF.spec && DEF.spec.life) || 1.4,
+            travel: 0, knock: s.knock,
             residual: res
           });
         }
@@ -136,8 +151,10 @@
           W().add({
             type: 'dart', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: 10, dmg: s.dmg, pierce: 0, hits: [],
+            r: (DEF.spec && DEF.spec.r) || 10, dmg: s.dmg, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
+            shape: (DEF.spec && DEF.spec.shape) || 'spore',
+            spec: DEF.spec,
             life: 1.6, travel: 0, knock: 0
           });
         }
@@ -169,6 +186,7 @@
               crit: crit > 1, effects: DEF.effects
             });
             global.Effects.onHit(G, cur, DEF.effects, final);
+            W().specHit(G, { spec: DEF.spec, color: DEF.color, effects: DEF.effects }, cur, final);
             cx = cur.x; cy = cur.y;
             cur = E().nearest(cx, cy, (s.range || 250) * 0.8, hit);
           }
@@ -191,9 +209,14 @@
           W().add({
             type: 'seeker', x: p.x, y: p.y,
             vx: Math.cos(a) * s.speed * 0.4, vy: Math.sin(a) * s.speed * 0.4,
-            speed: s.speed, turn: 4.2, target: null,
-            r: 7, dmg: s.dmg, pierce: 0, hits: [],
+            speed: s.speed, turn: (DEF.spec && DEF.spec.turn) || 4.2, target: null,
+            r: (DEF.spec && DEF.spec.r) || 7, dmg: s.dmg,
+            pierce: s.pierce || 0, hits: [],
             effects: DEF.effects, color: DEF.color,
+            shape: (DEF.spec && DEF.spec.shape) || 'seeker',
+            trail: DEF.spec && DEF.spec.trail,
+            retarget: DEF.spec && DEF.spec.retarget,
+            spec: DEF.spec,
             life: 3.4, travel: 0, knock: s.knock
           });
         }
@@ -215,8 +238,8 @@
           W().add({
             type: 'beam', x: p.x, y: p.y, a: aa,
             w: s.width || 14, len: s.len || 620, dmg: s.dmg,
-            effects: DEF.effects, color: DEF.color,
-            life: 0.16, max: 0.16, travel: 0, hits: [],
+            effects: DEF.effects, color: DEF.color, spec: DEF.spec,
+            life: beamLife(s.cd), max: beamLife(s.cd), travel: 0, hits: [],
             vx: Math.cos(aa), vy: Math.sin(aa), r: 0, pierce: 999
           });
           W().beamHit(G, p.x, p.y, aa, s.len, s.width, s.dmg, DEF, s.knock);

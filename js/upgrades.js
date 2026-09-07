@@ -32,9 +32,11 @@
     },
     {
       id: 'split', name: '多重射击', icon: '⋔', color: '#ffc93c', maxLevel: 5,
-      brief: '增加所有弹珠的投射物数量',
+      brief: '每级 +1 组子弹，但单发伤害 -10%',
       desc: function (lv) {
-        const f = (k) => '投射物 <b>' + pct(P25(k)) + '</b>　（+' + rnd((P25(k) - 1) * 100) + '%）';
+        const f = (k) => '子弹组 <b>' + (1 + k) + '</b> 组 · 单发伤害 <b>×' +
+          Math.pow(0.9, k).toFixed(2) + '</b>　（总输出 ×' +
+          ((1 + k) * Math.pow(0.9, k)).toFixed(2) + '）';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -60,15 +62,6 @@
       brief: '提高生命上限，并立即回复等量生命',
       desc: function (lv) {
         const f = (k) => '生命上限 <b>+' + k * 30 + '</b>';
-        return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
-      }
-    },
-    {
-      id: 'shield', name: '护盾涂层', icon: '⬡', color: '#9b6bff', maxLevel: 5,
-      brief: '减少受到的所有伤害',
-      desc: function (lv) {
-        const f = (k) => '护甲 <b>' + (k * 3.5).toFixed(1) + '</b> · 减伤 <b>' +
-          rnd(k * 3.5 / (k * 3.5 + 20) * 100) + '%</b>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },

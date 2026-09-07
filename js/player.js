@@ -32,7 +32,6 @@
     if (ps.thruster) p.speed *= Math.pow(1.10, ps.thruster);
     if (ps.plating) p.maxHpBase += 30 * ps.plating;
     if (ps.nano) p.regen += p.maxHpBase * 0.006 * ps.nano;
-    if (ps.shield) p.armor += 3.5 * ps.shield;
     if (ps.crit) { p.critChance += 0.12 * ps.crit; p.critMul += 0.33 * ps.crit; }
     if (ps.magnet) p.pickup *= Math.pow(1.25, ps.magnet);
 
@@ -233,7 +232,7 @@
         weapons: [],
         passives: Object.create(null),
         weaponSeq: 0,
-        blessing: { vampire: false, undying: false, roar: false },
+        blessing: { hunter: false, undying: false, roar: false },
         dmgBonus: 0
       };
       Object.assign(p, METHODS);
