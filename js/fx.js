@@ -1,4 +1,3 @@
-/* ===== fx.js · 粒子 / 飘字 / 屏幕震动 / 绘制助手 ===== */
 (function (global) {
   'use strict';
 
@@ -7,8 +6,8 @@
   const FX = {
     particles: [],
     texts: [],
-    rings: [],   // 冲击波圆环
-    bolts: [],   // 闪电折线
+    rings: [],
+    bolts: [],
     shake: 0,
     flash: 0,
 
@@ -24,7 +23,6 @@
     addShake(v) { this.shake = Math.min(26, this.shake + v); },
     addFlash(v) { this.flash = Math.min(1, this.flash + v); },
 
-    /** 爆炸粒子 */
     burst(x, y, color, count, opts) {
       opts = opts || {};
       const spd = opts.speed || 150;
@@ -45,12 +43,10 @@
       }
     },
 
-    /** 冲击波环 */
     ring(x, y, color, r0, r1, life, width) {
       this.rings.push({ x, y, color, r0, r1, life, max: life, w: width || 3 });
     },
 
-    /** 闪电折线（带抖动） */
     bolt(x1, y1, x2, y2, color, life, jag) {
       const segs = 8;
       const pts = [];
@@ -67,10 +63,9 @@
       this.bolts.push({ pts, color, life, max: life });
     },
 
-    /** 飘字 */
     text(x, y, str, color, opts) {
       opts = opts || {};
-      if (this.texts.length > 90) return;   // 防刷屏
+      if (this.texts.length > 90) return;
       this.texts.push({
         x: x + (Math.random() - 0.5) * 14,
         y: y,
@@ -85,7 +80,6 @@
     },
 
     update(dt) {
-      // 粒子
       const P = this.particles;
       for (let i = P.length - 1; i >= 0; i--) {
         const p = P[i];
@@ -95,7 +89,6 @@
         p.vx *= d; p.vy *= d;
         p.x += p.vx * dt; p.y += p.vy * dt;
       }
-      // 飘字
       const T = this.texts;
       for (let i = T.length - 1; i >= 0; i--) {
         const t = T[i];
@@ -105,13 +98,11 @@
         t.x += t.vx * dt;
         t.vy *= Math.exp(-1.6 * dt);
       }
-      // 环
       const R = this.rings;
       for (let i = R.length - 1; i >= 0; i--) {
         R[i].life -= dt;
         if (R[i].life <= 0) R.splice(i, 1);
       }
-      // 闪电
       const B = this.bolts;
       for (let i = B.length - 1; i >= 0; i--) {
         B[i].life -= dt;
@@ -128,7 +119,6 @@
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
 
-      // 冲击波
       for (const r of this.rings) {
         const t = 1 - r.life / r.max;
         const rad = r.r0 + (r.r1 - r.r0) * t;
@@ -140,7 +130,6 @@
         ctx.stroke();
       }
 
-      // 闪电
       for (const b of this.bolts) {
         const t = b.life / b.max;
         ctx.globalAlpha = t;
@@ -155,7 +144,6 @@
         ctx.stroke();
       }
 
-      // 粒子
       for (const p of this.particles) {
         const t = p.life / p.max;
         ctx.globalAlpha = Math.min(1, t * 1.5);
@@ -173,7 +161,6 @@
       ctx.restore();
     },
 
-    /** 飘字画在最上层（不做 lighter 混合，保证可读） */
     drawTexts(ctx) {
       ctx.save();
       ctx.textAlign = 'center';
@@ -192,30 +179,5 @@
     }
   };
 
-  /* ---------- 绘制助手 ---------- */
-  const Draw = {
-    /** 发光描边图形：fn 为绘制路径的函数 */
-    glow(ctx, color, blur, fn) {
-      ctx.save();
-      ctx.shadowColor = color;
-      ctx.shadowBlur = blur;
-      fn(ctx);
-      ctx.restore();
-    },
-    /** 简易外发光圆点 */
-    dot(ctx, x, y, r, color, glow) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = glow || 12;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-    }
-  };
-
   global.FX = FX;
-  global.Draw = Draw;
 })(window);

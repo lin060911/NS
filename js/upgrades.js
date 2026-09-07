@@ -1,13 +1,10 @@
-/* ===== upgrades.js · 被动强化与升级卡池 ===== */
 (function (global) {
   'use strict';
 
   const U = global.U;
 
-  /* ---------------- 被动强化 ----------------
-     基准（见 player.js recalc）：进攻向被动每级 +18% DPS，与弹珠每级成长对齐。
-     所有 desc 都显示「当前等级的值 → 下一级的值」。 */
   const P18 = (lv) => Math.pow(1.18, lv);
+  const P25 = (lv) => Math.pow(1.25, lv);
   const pct = (v) => '×' + v.toFixed(2);
   const rnd = (v) => Math.round(v);
 
@@ -37,7 +34,7 @@
       id: 'split', name: '多重射击', icon: '⋔', color: '#ffc93c', maxLevel: 5,
       brief: '增加所有弹珠的投射物数量',
       desc: function (lv) {
-        const f = (k) => '投射物 <b>' + pct(P18(k)) + '</b>　（+' + rnd((P18(k) - 1) * 100) + '%）';
+        const f = (k) => '投射物 <b>' + pct(P25(k)) + '</b>　（+' + rnd((P25(k) - 1) * 100) + '%）';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -105,7 +102,6 @@
   const byId = {};
   for (const p of PASSIVES) byId[p.id] = p;
 
-  /* 弹珠栏上限 */
   const MAX_WEAPONS = 6;
 
   const Upgrades = {
@@ -113,41 +109,28 @@
     passiveById: byId,
     MAX_WEAPONS: MAX_WEAPONS,
 
-    /* ============ 事件体系 ============
-       每次升级分两步「三选一」：
-         第一层  从三类事件中选一类（本文件 kindInfo）
-                   new     新弹珠（均为 B 阶），有 1 次刷新机会
-                   up      已有弹珠强化
-                   passive 被动强化
-         第二层  在该类里再从 3 个候选中选 1 个（rollEvent）
-       已无法继续强化的事件会置灰，并给出原因。
-    ==================================== */
-
-    /* 三类事件的展示信息（标题 / 副标题 / 说明） */
     KIND_META: {
       new: {
         kind: 'new', icon: '✧', color: '#9dff3c', cls: 't-new',
         title: '获取弹珠',
-        sub: '三选一 · 均为 B 阶 · 可刷新一次',
-        desc: '从 7 种基础弹珠里随机抽 3 颗，挑 1 颗加入构筑。' +
-              '<b>同一种可以重复持有</b> —— 两颗同种 B 阶正是合成对应 A 阶' +
-              '（配方矩阵对角线）的必要条件。'
+        sub: '三选一 · B 阶 · 可刷新一次',
+        desc: '随机 3 颗 B 阶弹珠选 1 颗。' +
+              '<b>同一种可重复持有</b> —— 两颗同种 B 阶才能合成对应 A 阶。'
       },
       up: {
         kind: 'up', icon: '⇧', color: '#9b6bff', cls: 't-up',
         title: '强化弹珠',
         sub: '三选一 · 提升 1 级',
-        desc: '把已有的一枚弹珠提升 1 级：伤害、范围、连锁等数值同步成长，满级后不再出现。'
+        desc: '已有弹珠升 1 级：伤害、范围、连锁同步成长，满级后不再出现。'
       },
       passive: {
         kind: 'passive', icon: '✦', color: '#38f0ff', cls: 't-up',
         title: '强化被动',
         sub: '三选一 · 提升 1 级',
-        desc: '永久强化角色本身：伤害、冷却、移速、生命、减伤等，全场弹珠通用。'
+        desc: '强化角色本身：伤害、冷却、移速、生命、减伤，全场弹珠通用。'
       }
     },
 
-    /** 三类事件的当前状态：徽标、提示、是否置灰、置灰原因 */
     kindInfo(G) {
       const P = G.player;
       const slotsLeft = MAX_WEAPONS - P.weapons.length;
@@ -156,8 +139,6 @@
         const meta = this.KIND_META[k];
         let pool, badge = '', hint = '', reason = '';
         if (k === 'new') {
-          // 同种 B 阶可以重复持有，所以候选池固定是全部 7 种，
-          // 而不是「还没拥有的那几种」。
           pool = slotsLeft > 0 ? this.newMarbles(G) : [];
           badge = '候选 ' + Weapons.TIER1.length + ' 种 · 随机 ' + Math.min(3, Weapons.TIER1.length);
           hint = '还可持有 ' + Math.max(0, slotsLeft) + ' 枚（弹珠栏 ' +
@@ -182,17 +163,14 @@
       return out;
     },
 
-    /** 可用事件类型（按当前状态判定） */
     availableKinds(G) {
       return this.kindInfo(G).filter(k => !k.disabled).map(k => k.kind);
     },
 
-    /** B 阶候选池：7 种基础弹珠，同一种可重复获得 */
     newMarbles(G) {
       return Weapons.TIER1.slice();
     },
 
-    /** 未满级的已有弹珠 */
     upgradeable(G) {
       const P = G.player;
       return P.weapons.filter(w => {
@@ -201,28 +179,20 @@
       });
     },
 
-    /** 未满级的被动 */
     passiveable(G) {
       const P = G.player;
       return PASSIVES.filter(p => (P.passives[p.id] || 0) < p.maxLevel);
     },
 
-    /** 随机抽 n 个不重复元素 */
     pickN(arr, n) {
       const pool = arr.slice();
       U.shuffle(pool);
       return pool.slice(0, n);
     },
 
-    /**
-     * 生成一次升级事件（第二层：该类事件的三选一候选）
-     * @param kind 事件类型：new / up / passive
-     * @returns { kind, cards, canReroll } 或 null（该类已无可选项）
-     */
     rollEvent(G, kind) {
       const kinds = this.availableKinds(G);
       if (!kinds.length) return null;
-      // 未指定或该类已不可用时，退回第一个可用类型
       if (!kind || kinds.indexOf(kind) < 0) kind = kinds[0];
 
       if (kind === 'new') {
@@ -233,8 +203,6 @@
       }
 
       if (kind === 'up') {
-        // 同种弹珠可以重复持有，同名卡必须靠实例 id 区分，
-        // 并标上「第几枚」，否则玩家分不清自己在强化哪一颗。
         const sel = this.pickN(this.upgradeable(G), 3);
         const seen = Object.create(null);
         const cards = sel.map((w) => {
@@ -251,13 +219,11 @@
       return { kind: 'passive', cards: cards, canReroll: false };
     },
 
-    /** 应用一张卡 */
     apply(G, card) {
       const P = G.player;
       if (card.kind === 'new') {
         P.addWeapon(card.id);
       } else if (card.kind === 'up') {
-        // 重复持有时同名弹珠有多枚，必须按实例 id 定位，不能只比弹珠 id
         const w = (card.wid !== undefined && P.weapons.find((x) => x.id2 === card.wid)) ||
           P.weapons.find((x) => x.id === card.id);
         if (w) {
@@ -269,7 +235,7 @@
         P.passives[card.id] = (P.passives[card.id] || 0) + 1;
         if (card.id === 'plating') {
           P.recalc();
-          P.hp = Math.min(P.maxHp, P.hp + 30);   // 与 maxHpBase 的每级 +30 对齐
+          P.hp = Math.min(P.maxHp, P.hp + 30);
         }
       }
       P.recalc();
@@ -279,7 +245,6 @@
 
   function P0(G) { return G.player.passives; }
 
-  /** 弹珠携带的特效说明（纯形态弹珠明确写「无附加特效」，不留空白） */
   function effectLine(def) {
     const ids = def.effectIds || [];
     if (!ids.length) return '<span class="dim">纯弹道形态 · 无附加特效</span>';
@@ -288,10 +253,6 @@
     ).join('<br>');
   }
 
-  /**
-   * 新弹珠卡。同一种 B 阶可以重复持有，因此要标明「已有 LvN」，
-   * 让玩家一眼看出这颗是补第二枚（用于同种合成）还是全新入手。
-   */
   function makeNewCard(def, P) {
     const own = (P && P.hasWeapon(def.id))
       ? P.weapons.find((w) => w.id === def.id) : null;
@@ -310,10 +271,6 @@
     };
   }
 
-  /**
-   * 弹珠强化卡。wid 是该弹珠实例的唯一 id（player.weaponSeq），
-   * 用于重复持有时精确定位到「第几枚」。
-   */
   function makeUpCard(def, w, ord) {
     const lv = w.level;
     const d = def.desc(lv + 1);
@@ -334,7 +291,7 @@
   }
 
   function makePassiveCard(p, lv) {
-    const d = p.desc(lv);   // cur = 当前等级，next = 升级后（lv+1）
+    const d = p.desc(lv);
     return {
       kind: 'passive', id: p.id, name: p.name, icon: p.icon, color: p.color,
       level: lv + 1,

@@ -1,9 +1,9 @@
-/* ===== game.js · 主控制器：循环 / 相机 / 生成 / UI ===== */
 (function (global) {
   'use strict';
 
   const U = global.U;
   const FX = global.FX;
+  const BAL = global.BAL;
   const Input = global.Input;
   const Enemies = global.Enemies;
   const Weapons = global.Weapons;
@@ -15,36 +15,36 @@
   const Telegraph = global.Telegraph;
   const TAU = Math.PI * 2;
 
-  const WIN_TIME = 900;          // 通关时间（秒）
+  const WIN_TIME = 900;
   const BOSS_TIMES = [180, 340, 500, 660, 820];
   const MAX_ENEMIES = 300;
   const MAX_GEMS = 460;
-  const FUSION_EVERY = 5;        // 每 5 级获得 1 次融合机会
-  const ROAR_CD = 120;           // 祝福「咆哮」的冷却（秒）
+  const FUSION_EVERY = 5;
+  const ROAR_CD = 120;
 
-  /* 宝箱祝福：三种特殊效果，只能各获得一次 */
+
   const BLESSINGS = [
     {
       id: 'vampire', name: '血族', icon: '❦', color: '#ff4d6d',
-      brief: '击败敌人时小概率回复少量生命',
-      desc: '每次击败敌人约 <b>6%</b> 概率回复 <b>3</b> 点生命（内置 0.4 秒间隔）'
+      brief: '击败敌人有几率回血',
+      desc: '击败敌人时 <b>6%</b> 概率回复 <b>3</b> 点生命'
     },
     {
       id: 'undying', name: '不灭', icon: '✟', color: '#b14dff',
-      brief: '免疫一次致命伤（一次性）',
-      desc: '受到致命伤害时生命值保留 <b>1</b> 点并进入 <b>3</b> 秒无敌，随后失效。<b>无法抵御紫色秒杀技</b>'
+      brief: '免疫一次致命伤',
+      desc: '致命伤留 <b>1</b> 点生命并无敌 <b>3</b> 秒，一次性。<b>挡不住紫色秒杀</b>'
     },
     {
       id: 'roar', name: '咆哮', icon: '◉', color: '#ffc93c',
-      brief: '获得技能「咆哮」（R 键，冷却 120 秒）',
-      desc: '消灭全屏敌人（<b>领主除外</b>），并立即吸收场上所有经验球'
+      brief: '解锁技能「咆哮」（R 键，冷却 120 秒）',
+      desc: '清场（<b>领主除外</b>）并吸收所有经验球'
     }
   ];
 
   const $ = (id) => document.getElementById(id);
 
   const Game = {
-    state: 'menu',     // menu | playing | levelup | pause | over
+    state: 'menu',
     time: 0,
     kills: 0,
     damageDone: 0,
@@ -60,7 +60,6 @@
     _hudTick: 0,
     cam: { x: 0, y: 0 },
 
-    /* ---------------- 初始化 ---------------- */
     init() {
       this.canvas = $('game');
       this.ctx = this.canvas.getContext('2d');
@@ -73,7 +72,6 @@
       this.showBest();
       this.reset();
 
-      // 失焦自动暂停
       global.addEventListener('blur', () => {
         if (this.state === 'playing') this.pause();
       });
@@ -103,7 +101,6 @@
       this.canvas.style.height = h + 'px';
     },
 
-    /* ---------------- UI 绑定 ---------------- */
     bindUI() {
       $('btnStart').onclick = () => { Sfx.init(); Sfx.play('ui'); this.start(); };
       $('btnHow').onclick = () => { Sfx.play('ui'); $('screenMenu').classList.add('hidden'); $('screenHow').classList.remove('hidden'); };
@@ -132,15 +129,8 @@
         const btn = $('btn-' + id);
         if (btn) btn.onclick = () => this.switchTab(id);
       }
-      // 刷新按钮的点击逻辑由 renderEvent() 按当前事件类型动态绑定
     },
 
-    show(el) {
-      ['screenMenu', 'screenHow', 'screenLevel', 'screenFusion', 'screenChest',
-      'screenPause', 'screenWin', 'screenOver', 'screenLoadout'].forEach((id) => {
-        $(id).classList.toggle('hidden', id !== el);
-      });
-    },
     hideAllScreens() {
       ['screenMenu', 'screenHow', 'screenLevel', 'screenFusion', 'screenChest',
       'screenPause', 'screenWin', 'screenOver', 'screenLoadout'].forEach((id) => {
@@ -148,7 +138,6 @@
       });
     },
 
-    /* ---------------- 开局 ---------------- */
     reset() {
       this.time = 0;
       this.kills = 0;
@@ -177,7 +166,7 @@
       Input.reset();
 
       this.player = Player.create();
-      this.player.addWeapon('pierce');  // 初始武器：飞镖弹（穿击形态）
+      this.player.addWeapon('pierce');
       this.player.recalc();
       this.player.hp = this.player.maxHp;
       this.cam.x = this.player.x;
@@ -207,12 +196,10 @@
       Sfx.play('ui');
     },
 
-    /** 构筑：弹珠 + 被动 + 祝福 + 核心属性。暂停页「构筑」与升级页「武备」共用 */
     buildBuildHtml() {
       const p = this.player;
       let html = '';
 
-      /* 弹珠 */
       html += '<div class="build-sec"><div class="build-h">弹珠' +
         '<span class="bh-dim">' + p.weapons.length + ' / ' + Upgrades.MAX_WEAPONS + '</span></div>';
       if (!p.weapons.length) {
@@ -236,7 +223,6 @@
       }
       html += '</div>';
 
-      /* 被动 */
       html += '<div class="build-sec"><div class="build-h">被动</div>';
       let any = false;
       for (const id in p.passives) {
@@ -250,7 +236,6 @@
       if (!any) html += '<div class="build-row bdim">暂无</div>';
       html += '</div>';
 
-      /* 祝福（宝箱产出） */
       const bl = p.blessing || {};
       const got = BLESSINGS.filter(b => bl[b.id]);
       if (got.length) {
@@ -262,7 +247,6 @@
         html += '</div>';
       }
 
-      /* 核心属性 */
       html += '<div class="build-sec"><div class="build-h">属性</div>';
       const rows = [
         ['伤害', '×' + (1 + p.dmgMul).toFixed(2)],
@@ -288,7 +272,6 @@
       this.buildSkillsContent();
     },
 
-    /* ---------------- 武备面板（升级时可查看） ---------------- */
     openLoadout() {
       $('loadoutBox').innerHTML = this.buildBuildHtml();
       $('screenLoadout').classList.remove('hidden');
@@ -300,30 +283,26 @@
       Sfx.play('ui');
     },
 
-    /** 合成图鉴：B+B→A 配方矩阵与全清单 + A+A→S 判定规则与全清单 */
     buildCodex() {
       const aid = (k) => 'a' + String(k + 1).padStart(2, '0');
-      const sid = (k) => 's' + String(k + 1).padStart(2, '0');
       const def = (id) => Weapons.defs[id];
       let ch = '';
 
-      /* ---- 导读：三条就够 ---- */
       ch += '<div class="build-note codex-lead">' +
-        '<b>记住三条就够</b>：' +
-        '① 只有<b>同阶</b>能合成，<b>顺序不影响产物</b>；' +
-        '② 产物等级 = 两颗等级之和，夹到该阶区间（B 1~3 · A 2~6 · S 4~12）；' +
-        '③ 每 <b>' + FUSION_EVERY + '</b> 级获得 1 次合成机会。' +
+        '<b>三条规则</b><br>' +
+        '① 只有<b>同阶</b>能合成，<b>顺序不影响产物</b><br>' +
+        '② 产物等级 = 两颗之和，夹在该阶区间：B 1~3 · A 2~6 · S 4~12<br>' +
+        '③ 每 <b>' + FUSION_EVERY + '</b> 级获得 1 次合成机会' +
         '</div>';
 
-      /* ================= 一 · B + B → A ================= */
       const M1 = Fusions.matrix1();
       const B_IDS = Fusions.FORMS;
       ch += '<div class="build-sec">';
       ch += '<div class="build-h">一 · B + B → A' +
-        '<span class="bh-dim">7 种基础弹珠两两组合（可相同）= ' + M1.out.length + ' 种 A 阶弹珠</span></div>';
+        '<span class="bh-dim">7 种基础弹珠两两组合 = ' + M1.out.length + ' 种 A 阶</span></div>';
       ch += '<div class="build-note">' +
-        '行、列分别是两颗材料，交叉格即产物。<b>高亮的对角线</b>是同种弹珠合成 —— ' +
-        '这类产物必须同时持有两颗<b>同种</b> B 阶弹珠才能得到，因此同一种 B 阶<b>可以也应当重复持有</b>。' +
+        '行、列 = 两颗材料，交叉格 = 产物。<b>高亮对角线</b>是同种弹珠合成，' +
+        '所以同一种 B 阶<b>要留两颗</b>。' +
         '</div>';
 
       ch += '<div class="mx-wrap"><table class="mx">';
@@ -346,8 +325,7 @@
       }
       ch += '</table></div>';
 
-      /* A 阶 28 件完整配方清单 */
-      ch += '<div class="build-h sub">A 阶 ' + M1.out.length + ' 件 · 完整配方</div>';
+      ch += '<div class="build-h sub">A 阶 ' + M1.out.length + ' 件 · 配方</div>';
       ch += '<div class="recipe-list">';
       for (let k = 0; k < M1.out.length; k++) {
         const d = def(aid(k));
@@ -361,38 +339,36 @@
       }
       ch += '</div></div>';
 
-      /* ================= 二 · A + A → S ================= */
       ch += '<div class="build-sec">';
       ch += '<div class="build-h">二 · A + A → S' +
         '<span class="bh-dim">28 种 A 阶两两组合 = 406 条 → ' +
-        Weapons.TIER3.length + ' 种 S 阶弹珠</span></div>';
+        Weapons.TIER3.length + ' 种 S 阶</span></div>';
       ch += '<div class="build-note">' +
-        '不查表，按规则判定：把两颗 A 各拆回两颗 B，共 <b>4 颗</b>，再看构成。' +
+        '不查表也能推：把两颗 A 各拆回两颗 B，共 <b>4 颗</b>，再看构成。' +
         '并列时按「飞镖 &gt; 爆破 &gt; 激光 &gt; 追踪、雪花 &gt; 毒气 &gt; 电弧」取。' +
         '</div>';
       ch += '<ol class="rule-list">' +
-        '<li>有形态也有特效，但没有任何一种凑到 2 颗 → <b>奇点</b></li>' +
-        '<li>全是形态（没有特效）→ <b>加强形态</b>，取数量最多的形态</li>' +
-        '<li>全是特效 → 两种特效各 2 颗时得 <b>效果对强化</b>，否则 <b>纯效果强化</b></li>' +
-        '<li>特效有 3 颗以上 → <b>纯效果强化</b>，取数量最多的特效</li>' +
-        '<li>其余 → <b>形态 + 特效</b>，形态为主、特效为辅</li>' +
+        '<li>形态与特效都有、且没有任何一种凑到 2 颗 → <b>奇点</b></li>' +
+        '<li>全是形态 → <b>加强形态</b>（取最多的形态）</li>' +
+        '<li>全是特效 → 两种各 2 颗得 <b>效果对强化</b>，否则 <b>纯效果强化</b></li>' +
+        '<li>特效 ≥ 3 颗 → <b>纯效果强化</b>（取最多的特效）</li>' +
+        '<li>其余 → <b>形态 + 特效</b>，形态为主</li>' +
         '</ol>';
 
-      /* S 阶 23 件 · 配方数与示例 */
-      ch += '<div class="build-h sub">S 阶 ' + Weapons.TIER3.length + ' 件 · 配方数量与示例</div>';
+      ch += '<div class="build-h sub">S 阶 ' + Weapons.TIER3.length + ' 件 · 配方</div>';
       ch += '<div class="s-list">';
-      for (let k = 0; k < Weapons.TIER3.length; k++) {
-        const d = def(sid(k));
-        const rs = Fusions.recipesForS(sid(k));
+      for (const id of Weapons.TIER3) {
+        const d = def(id);
+        const rs = Fusions.recipesForS(id);
         ch += '<div class="s-item">' +
           '<div class="s-head" style="color:' + d.color + '">' + d.icon +
             ' <b>' + d.name + '</b>' +
             '<span class="s-cnt">' + rs.length + ' 条</span>' +
           '</div>' +
           '<div class="s-rec">' +
-            rs.slice(0, 5).map((r) => '<span class="rchip">' + r.ai + ' ' + r.a +
+            rs.slice(0, 4).map((r) => '<span class="rchip">' + r.ai + ' ' + r.a +
               '<span class="r-plus">＋</span>' + r.bi + ' ' + r.b + '</span>').join('') +
-            (rs.length > 5 ? '<span class="rmore">… 另有 ' + (rs.length - 5) + ' 条</span>' : '') +
+            (rs.length > 4 ? '<span class="rmore">… 另有 ' + (rs.length - 4) + ' 条</span>' : '') +
           '</div></div>';
       }
       ch += '</div></div>';
@@ -400,7 +376,6 @@
       $('tabCodex').innerHTML = ch;
     },
 
-    /** 技能装配页：S 阶解锁技能，最多携带 3 个 */
     buildSkillsContent() {
       const p = this.player;
       const unlocked = Abilities.unlocked(p);
@@ -425,9 +400,9 @@
       }
       ch += '</div>';
 
-      ch += '<div class="build-sec"><div class="build-h">可用技能（由 S 阶弹珠解锁）</div>';
-      if (!unlocked.length) {
-        ch += '<div class="build-row bdim">尚未解锁 —— 合成出 S 阶弹珠即可解锁对应技能</div>';
+      ch += '<div class="build-sec"><div class="build-h">可用技能</div>';
+        if (!unlocked.length) {
+        ch += '<div class="build-row bdim">尚未解锁 —— 合成 S 阶弹珠即可解锁</div>';
       } else {
         for (const id of unlocked) {
           const d = Abilities.defs[id];
@@ -441,7 +416,6 @@
       }
       ch += '</div>';
 
-      // 未解锁一览
       const locked = [];
       for (const sid in Abilities.BIND) {
         const aid = Abilities.BIND[sid];
@@ -460,12 +434,11 @@
         ch += '</div>';
       }
 
-      ch += '<div class="build-note">每拥有一件 S 阶弹珠，就解锁一个专属技能；' +
-        '最多同时携带 <b>' + Abilities.MAX_SLOTS + '</b> 个，同种技能只能带一个。</div>';
+      ch += '<div class="build-note">每件 S 阶弹珠解锁一个专属技能，最多带 <b>' +
+        Abilities.MAX_SLOTS + '</b> 个，同种只能带一个。</div>';
 
       const box = $('tabSkills');
       box.innerHTML = ch;
-      // 绑定点击
       const rows = box.querySelectorAll('.sk-row.pick, .sk-row.filled');
       for (const row of rows) {
         row.onclick = () => this.toggleSkill(row.getAttribute('data-skill'));
@@ -494,7 +467,7 @@
       $('pauseStats').innerHTML =
         '存活 <b>' + U.formatTime(this.time) + '</b> · 等级 <b>' + p.level + '</b><br>' +
         '击杀 <b>' + this.kills + '</b> · 总伤害 <b>' + Math.round(this.damageDone) + '</b><br>' +
-        '<span style="opacity:.75">武器：' + p.weapons.map((w) => Weapons.defs[w.id].name + ' Lv' + w.level).join('、') + '</span>';
+        '<span style="opacity:.75">弹珠：' + p.weapons.map((w) => Weapons.defs[w.id].name + ' Lv' + w.level).join('、') + '</span>';
       $('screenPause').classList.remove('hidden');
     },
 
@@ -505,18 +478,16 @@
       Input.reset();
     },
 
-    /* ---------------- 主循环 ---------------- */
     loop(ts) {
       let dt = (ts - this._last) / 1000;
       this._last = ts;
       if (!(dt > 0)) dt = 0.016;
-      if (dt > 0.05) dt = 0.05;   // 防止切标签后跳帧
+      if (dt > 0.05) dt = 0.05;
 
       if (this.state === 'playing') {
         this.update(dt);
       } else if (this.state === 'levelup' || this.state === 'pause' || this.state === 'over' ||
                  this.state === 'fusion' || this.state === 'chestreward' || this.state === 'win') {
-        // 静止：仅推进特效衰减，保证画面不僵死
         FX.update(Math.min(dt, 0.016));
       }
 
@@ -528,79 +499,59 @@
       const p = this.player;
       this.time += dt;
 
-      // --- 输入 & 玩家 ---
       const dir = Input.getDir(this.w / 2 + (p.x - this.cam.x), this.h / 2 + (p.y - this.cam.y));
       p.update(this, dt, dir);
 
-      // --- 敌人生成 ---
       this.spawnTick(dt);
 
-      // --- 网格重建（供索敌 / 碰撞 / 分离使用）---
       Enemies.rebuildGrid();
 
-      // --- 敌人 ---
       Enemies.update(this, dt);
 
-      // --- 武器 ---
       for (const w of p.weapons) Weapons.fire(this, w, dt);
       Weapons.update(this, dt);
 
-      // --- 主动技能 & 蓄力预警 ---
       Abilities.update(this, dt);
       Telegraph.update(this, dt);
 
-      // --- 祝福：咆哮冷却 / 血族内置间隔 ---
       if (this.roarCd > 0) this.roarCd = Math.max(0, this.roarCd - dt);
       if (p._vampCd > 0) p._vampCd = Math.max(0, p._vampCd - dt);
 
-      // --- 宝石 ---
       this.updateGems(dt);
       this.updateHeals(dt);
 
-      // --- 宝箱 ---
       this.updateChests(dt);
 
-      // --- 特效 ---
       FX.update(dt);
 
-      // --- 相机 ---
       const lx = p.x + p.vx * 0.16, ly = p.y + p.vy * 0.16;
       const k = 1 - Math.exp(-7 * dt);
       this.cam.x += (lx - this.cam.x) * k;
       this.cam.y += (ly - this.cam.y) * k;
 
-      // --- HUD ---
       this._hudTick += dt;
       if (this._hudTick > 0.06) { this._hudTick = 0; this.updateHUD(); }
 
-      // --- Toast ---
       if (this.toastT > 0) {
         this.toastT -= dt;
         if (this.toastT <= 0) $('toast').classList.remove('show');
       }
 
-      // --- 最终领主：击败即为通关，可选择继续挑战 ---
       if (!this.endless && this.time >= WIN_TIME && !this.finalSpawned) {
         this.finalSpawned = true;
         Enemies.spawnFinalBoss(this);
       }
     },
 
-    /* ---------------- 敌人生成 ---------------- */
     spawnTick(dt) {
       const t = this.time;
 
-      // 领主
       while (this.bossQueue < BOSS_TIMES.length && t >= BOSS_TIMES[this.bossQueue]) {
         Enemies.spawnBoss(this, this.bossQueue);
         this.bossQueue++;
       }
 
-      // 无尽模式：怪物数量与强度同步飙升
-      // 常规模式前 60 秒刻意平缓，给玩家留出攒第一批弹珠的窗口
-      const rate = this.endless
-        ? Math.min(26, 13 + Math.max(0, t - WIN_TIME) * 0.028)
-        : Math.min(13, 0.75 + t * 0.0155);
+      const rate = BAL.spawnRate(t, this.endless, this.endlessStart);
       this.spawnAcc += rate * dt;
       if (Enemies.list.length >= MAX_ENEMIES) { this.spawnAcc = Math.min(this.spawnAcc, 3); return; }
 
@@ -609,16 +560,14 @@
         this.spawnAcc -= 1;
         const pick = U.weighted(weights);
         let count = 1;
-        if (pick.t === 'swarm') count = U.randInt(3, 6);
-        else if (t > 240 && U.chance(0.3)) count = 2;
+        if (pick.t === 'swarm') count = U.randInt(BAL.SPAWN_SWARM_MIN, BAL.SPAWN_SWARM_MAX);
+        else if (t > BAL.SPAWN_DUO_T && U.chance(BAL.SPAWN_DUO_P)) count = 2;
         Enemies.spawnRing(this, pick.t, count);
       }
     },
 
-    /* ---------------- 宝石 ---------------- */
     spawnGem(x, y, val) {
       if (this.gems.length > MAX_GEMS) {
-        // 超量时合并，避免堆积拖慢帧率
         let g = null, bd = Infinity;
         for (let k = 0; k < 6; k++) {
           const c = this.gems[(Math.random() * this.gems.length) | 0];
@@ -654,7 +603,6 @@
         const dx = p.x - g.x, dy = p.y - g.y;
         const d2 = dx * dx + dy * dy;
 
-        // 停留过久的晶体会被自动回收，避免经验白白流失
         if (g.age > 7) g.pulled = true;
 
         if (g.pulled || d2 < pr2 * 3.2) {
@@ -682,7 +630,6 @@
       if (this.pendingLevelUps > 0 && this.state === 'playing') this.openLevelUp();
     },
 
-    /* ---------------- 生命晶体（绿色，低概率掉落）---------------- */
     spawnHeal(x, y, val) {
       if (this.heals.length > 120) return;
       const a = Math.random() * TAU;
@@ -703,7 +650,6 @@
         const dx = p.x - h.x, dy = p.y - h.y;
         const d2 = dx * dx + dy * dy;
 
-        // 低血量时吸附范围扩大，救急更跟手
         const lowHp = p.hp / p.maxHp < 0.4;
         const range = pr * (lowHp ? 4.2 : 2.6);
         if (h.pulled || d2 < range * range) {
@@ -740,12 +686,10 @@
       for (let i = 0; i < H.length; i++) {
         const h = H[i];
         const pulse = 0.75 + Math.sin(this.time * 6 + i) * 0.25;
-        // 绿色光晕
         ctx.fillStyle = 'rgba(157,255,60,' + (0.22 * pulse) + ')';
         ctx.beginPath();
         ctx.arc(h.x, h.y, h.r * 2.4, 0, TAU);
         ctx.fill();
-        // 十字核心
         ctx.fillStyle = '#9dff3c';
         ctx.shadowColor = '#9dff3c';
         ctx.shadowBlur = 12;
@@ -759,7 +703,6 @@
         ctx.lineTo(h.x - a, h.y - b); ctx.lineTo(h.x - b, h.y - b);
         ctx.closePath();
         ctx.fill();
-        // 白色高光
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 6;
         ctx.beginPath();
@@ -769,8 +712,6 @@
       ctx.restore();
     },
 
-    /* ---------------- 融合机会 ---------------- */
-    /** 每 FUSION_EVERY 级发放 1 次合成机会 */
     checkFusionUnlock() {
       const milestone = Math.floor(this.player.level / FUSION_EVERY);
       if (milestone > this.fusionMilestone) {
@@ -782,7 +723,6 @@
       return false;
     },
 
-    /* ---------------- 宝箱 ---------------- */
     updateChests(dt) {
       const p = this.player;
       for (let i = this.chests.length - 1; i >= 0; i--) {
@@ -810,18 +750,10 @@
       this.toast('领 主 已 击 破');
     },
 
-    /* ---------------- 升级事件 ----------------
-       每次升级都是两轮「三选一」：
-         第一层  三类事件里选一类：新弹珠 / 弹珠强化 / 被动强化
-         第二层  该类事件里再选一项（新弹珠事件另有 1 次刷新机会）
-       已无法继续强化的事件在第一层置灰，并写明原因。
-    --------------------------------------------- */
     openLevelUp() {
       const choices = Upgrades.kindInfo(this);
       const usable = choices.filter(c => !c.disabled);
       if (!usable.length) {
-        // 已无任何可选项：转化为生命回复。
-        // 关键：必须把状态交还给游戏，否则 state 会永久停在 levelup 导致卡死。
         this.pendingLevelUps = 0;
         const p = this.player;
         p.hp = Math.min(p.maxHp, p.hp + 30);
@@ -837,23 +769,20 @@
       this.state = 'levelup';
       this.levelEvent = null;
       this.levelKind = null;
-      this._rerollUsed = false;      // 每次升级重置刷新机会
-      // 本轮每类事件的候选缓存：切出去看武备、或返回上一层再进来时，
-      // 三选一的内容必须保持一致 —— 否则返回动作就等于免费刷新。
+      this._rerollUsed = false;
       this._levelEvents = Object.create(null);
       Sfx.play('levelup');
       this.renderEventChoices(choices);
       $('screenLevel').classList.remove('hidden');
     },
 
-    /** 第一层：三类事件三选一 */
     renderEventChoices(choices) {
       const box = $('cardBox');
       box.innerHTML = '';
       const left = this.pendingLevelUps;
       this.setLevelHead('强 化 协 议',
-        left > 1 ? '本轮共 ' + left + ' 次强化 —— 先选择一类'
-                 : '先选择一类强化，再从中三选一');
+        left > 1 ? '本轮共 ' + left + ' 次强化，先选一类'
+                 : '先选一类，再从中三选一');
 
       for (const c of choices) {
         const el = document.createElement('div');
@@ -872,7 +801,6 @@
       this.setLevelBtns({ back: false, reroll: false });
     },
 
-    /** 选中某一类事件，进入第二层（候选来自本轮缓存，重复进出内容不变） */
     chooseKind(kind) {
       let ev = this._levelEvents && this._levelEvents[kind];
       if (!ev) {
@@ -886,7 +814,6 @@
       this.renderEvent(ev);
     },
 
-    /** 回到第一层重新挑事件（不消耗刷新机会） */
     backEventChoices() {
       this.levelEvent = null;
       this.levelKind = null;
@@ -901,14 +828,13 @@
       if (sEl) sEl.textContent = sub || '';
     },
 
-    /** 底部按钮区：返回上一级 / 刷新候选 */
     setLevelBtns(opt) {
       opt = opt || {};
       const rb = $('btnReroll');
       if (rb) {
         const show = !!opt.reroll;
         rb.classList.toggle('hidden', !show);
-        rb.textContent = '↻ 刷新选项（本次升级限一次）';
+        rb.textContent = '↻ 刷新（限一次）';
         rb.onclick = show ? (() => this.rerollEvent()) : null;
       }
       const bb = $('btnBackKind');
@@ -919,7 +845,6 @@
       }
     },
 
-    /** 第二层：该类事件的三选一 */
     renderEvent(ev) {
       const box = $('cardBox');
       box.innerHTML = '';
@@ -930,9 +855,9 @@
         'passive': '强 化 被 动'
       };
       const titlesub = {
-        'new': '三选一 · 均为 B 阶 · 可重复获得同一种 · 可刷新一次',
-        'up': '三选一 · 选一枚弹珠提升一级',
-        'passive': '三选一 · 选一项被动提升一级'
+        'new': '三选一 · B 阶 · 可刷新一次',
+        'up': '三选一 · 弹珠等级 +1',
+        'passive': '三选一 · 被动等级 +1'
       };
       this.setLevelHead(titles[ev.kind] || '强 化', titlesub[ev.kind] || '');
 
@@ -955,14 +880,12 @@
         box.appendChild(el);
       }
 
-      // 刷新：仅「新弹珠」事件提供，且每次升级限一次
       this.setLevelBtns({
         back: true,
         reroll: !!ev.canReroll && !this._rerollUsed
       });
     },
 
-    /** 刷新新弹珠候选（每次升级仅一次） */
     rerollEvent() {
       const ev = this.levelEvent;
       if (!ev || !ev.canReroll || this._rerollUsed) return;
@@ -970,7 +893,7 @@
       if (!fresh) return;
       this._rerollUsed = true;
       this.levelEvent = fresh;
-      if (this._levelEvents) this._levelEvents.new = fresh;   // 刷新结果同样进缓存
+      if (this._levelEvents) this._levelEvents.new = fresh;
       Sfx.play('ui');
       this.renderEvent(fresh);
     },
@@ -989,7 +912,6 @@
       }
     },
 
-    /* ---------------- 融合界面 ---------------- */
     tryOpenFusion() {
       const p = this.player;
       if (!this._fusionPending || this.fusionCharges <= 0) return;
@@ -1005,6 +927,18 @@
       $('screenFusion').classList.remove('hidden');
     },
 
+    fusionCardHtml(def, tag, foot) {
+      const eff = def.effectIds.length
+        ? Effects.name(def.effectIds[0]) : '纯弹道形态 · 无特效';
+      return '<div class="f-ic" style="color:' + def.color + '">' + def.icon + '</div>' +
+        '<div class="f-main">' +
+          '<div class="f-line"><span class="f-name">' + def.name + '</span>' +
+            (tag ? '<span class="f-tag">' + tag + '</span>' : '') + '</div>' +
+          '<div class="f-desc">' + eff + ' · ' + def.brief + '</div>' +
+          (foot ? '<div class="f-foot">' + foot + '</div>' : '') +
+        '</div>';
+    },
+
     renderFusion() {
       const p = this.player;
       const list = $('fusionList');
@@ -1016,7 +950,6 @@
         const sel = this.fusionSel.indexOf(i);
         const maxed = w.level >= def.maxLevel;
 
-        // 已选一颗后，无法与之合成的项置灰（异阶 / S 阶已是终点）
         let disabled = false;
         if (sel < 0 && sel0 !== undefined && sel0 !== i) {
           const other = p.weapons[sel0];
@@ -1026,17 +959,10 @@
         const el = document.createElement('div');
         el.className = 'card fcard' + (sel >= 0 ? ' selected' : '') + (disabled ? ' disabled' : '');
 
-        const effTxt = def.effectIds.length
-          ? Effects.name(def.effectIds[0]) : '纯弹道形态 · 无特效';
+        const foot = maxed ? '已满级' : (def.tier === 3 ? '已是终点' : '');
 
-        el.innerHTML =
-          '<div class="c-ic" style="color:' + def.color + '">' + def.icon + '</div>' +
-          '<div class="c-name">' + def.name + '</div>' +
-          '<div class="c-tag ' + (def.tier === 1 ? 't-new' : 't-up') + '">' +
-            def.tierName + ' 阶 · Lv' + w.level + '/' + def.maxLevel + '</div>' +
-          '<div class="c-desc">' + effTxt + '<br>' + def.brief + '</div>' +
-          (maxed ? '<div class="lv-warn">已满级</div>' : '') +
-          (def.tier === 3 ? '<div class="lv-warn">已是终点</div>' : '') +
+        el.innerHTML = this.fusionCardHtml(def,
+          def.tierName + ' 阶 · Lv' + w.level + '/' + def.maxLevel, foot) +
           (sel >= 0 ? '<div class="fsel-badge">' + (sel === 0 ? '一' : '二') + '</div>' : '');
 
         if (!disabled) el.onclick = () => this.pickFusion(i);
@@ -1069,14 +995,9 @@
       const out = $('fslotOut');
       if (res) {
         out.className = 'fslot result filled';
-        out.innerHTML =
-          '<div class="c-ic" style="color:' + res.def.color + '">' + res.def.icon + '</div>' +
-          '<div class="c-name">' + res.def.name + '</div>' +
-          '<div class="c-tag t-up">' + res.def.tierName + ' 阶 · Lv' + res.level + '/' + res.def.maxLevel + '</div>' +
-          '<div class="c-desc">' + (res.def.effectIds.length
-            ? Effects.name(res.def.effectIds[0]) : '纯弹道形态 · 无特效') +
-          '<br>' + res.def.brief + '</div>' +
-          '<div class="f-reason">Lv' + a.level + ' + Lv' + b.level + ' = Lv' + res.level + '</div>';
+        out.innerHTML = this.fusionCardHtml(res.def,
+          res.def.tierName + ' 阶 · Lv' + res.level + '/' + res.def.maxLevel,
+          'Lv' + a.level + ' + Lv' + b.level + ' = Lv' + res.level);
       } else {
         out.className = 'fslot result empty';
         out.innerHTML = '<div class="fslot-hint">产物</div>';
@@ -1099,12 +1020,7 @@
       }
       const def = Weapons.defs[w.id];
       el.className = 'fslot filled';
-      el.innerHTML =
-        '<div class="c-ic" style="color:' + def.color + '">' + def.icon + '</div>' +
-        '<div class="c-name">' + def.name + '</div>' +
-        '<div class="c-tag t-up">' + def.tierName + ' · Lv' + w.level + '</div>' +
-        '<div class="c-desc">' + (def.effectIds.length
-          ? Effects.name(def.effectIds[0]) : '纯弹道形态 · 无特效') + '</div>';
+      el.innerHTML = this.fusionCardHtml(def, def.tierName + ' 阶 · Lv' + w.level, '');
     },
 
     confirmFusion() {
@@ -1116,7 +1032,7 @@
       if (!res) return;
       this.fusionCharges--;
       this.fusionSel = [];
-      Abilities.prune(p);          // 弹珠被消耗后，同步卸下失效技能
+      Abilities.prune(p);
       this.buildSkillBar();
       if (res.def.tier === 3) this.checkSkillUnlocks();
       $('screenFusion').classList.add('hidden');
@@ -1132,15 +1048,11 @@
     skipFusion() {
       this.fusionSel = [];
       $('screenFusion').classList.add('hidden');
-      this._fusionPending = false;   // 次数保留，下次升级再提示
+      this._fusionPending = false;
       this.state = 'playing';
       Input.reset();
     },
 
-    /**
-     * 检测新解锁的技能（合成出 S 阶弹珠时）
-     * 返回本次新解锁的技能名列表
-     */
     checkSkillUnlocks() {
       const p = this.player;
       const now = Abilities.unlocked(p);
@@ -1150,7 +1062,6 @@
       for (const id of fresh) {
         const d = Abilities.defs[id];
         this.toast('★ 解 锁 技 能 · ' + d.name + ' ★');
-        // 有空位就自动装上，避免玩家错过
         if (Abilities.loadout.length < Abilities.MAX_SLOTS && !Abilities.equipped(id)) {
           Abilities.loadout.push(id);
           this.buildSkillBar();
@@ -1163,7 +1074,6 @@
       return fresh;
     },
 
-    /* ---------------- 通关：最终领主倒下 ---------------- */
     onFinalBossDown(e) {
       if (this.state !== 'playing') return;
       this.state = 'win';
@@ -1185,13 +1095,11 @@
       $('screenWin').classList.remove('hidden');
     },
 
-    /** 保存成绩并退出 */
     saveAndExit() {
       $('screenWin').classList.add('hidden');
       this.gameOver(true);
     },
 
-    /** 继续挑战：进入无尽模式，领主进入二阶段 */
     startEndless() {
       $('screenWin').classList.add('hidden');
       this.endless = true;
@@ -1204,7 +1112,6 @@
         e.hitFlash = 0;
         Enemies.enterPhase2(this, e);
       } else {
-        // 兜底：理论上不会走到这里
         const b = Enemies.spawnFinalBoss(this);
         Enemies.enterPhase2(this, b);
       }
@@ -1215,7 +1122,6 @@
       this.buildSkillBar();
     },
 
-    /** 当前构筑的一句话摘要，用于结算展示 */
     weaponSummary() {
       const p = this.player;
       if (!p.weapons.length) return '无';
@@ -1226,31 +1132,29 @@
       return names.join(' · ');
     },
 
-    /* ---------------- 领主宝库：智库 / 肉身 / 祝福 ---------------- */
     openChestReward() {
       this.state = 'chestreward';
       const p = this.player;
       const box = $('chestBox');
       box.innerHTML = '';
 
-      // 祝福：优先从未获得的里面随机；全部获得后该项置灰
       const left = BLESSINGS.filter(b => !p.blessing[b.id]);
       const opts = [
         {
           id: 'codex', name: '智库', icon: '❖', color: '#38f0ff', tag: '智 库', tagCls: 't-up',
           brief: '立刻提升三级',
-          detail: '等级 <b>+3</b>，随即连续执行 <b>3 次</b>事件选择'
+          detail: '等级 <b>+3</b>，马上再选 <b>3</b> 次强化'
         },
         {
           id: 'flesh', name: '肉身', icon: '▣', color: '#ff7a3d', tag: '肉 身', tagCls: 't-new',
           brief: '伤害 +10%，生命 +30',
-          detail: '所有弹珠伤害 <b>+10%</b>（永久）· 生命上限 <b>+30</b> 并立即回复等量'
+          detail: '伤害 <b>+10%</b> · 生命上限 <b>+30</b> 并回复等量'
         },
         {
           id: 'blessing', name: '祝福', icon: '✧', color: '#ffc93c', tag: '祝 福', tagCls: 't-up',
-          brief: '随机获得一个未知的特殊效果',
+          brief: '随机获得一个特殊效果',
           detail: left.length
-            ? '尚未获得 <b>' + left.length + ' / ' + BLESSINGS.length + '</b> 种 —— 开箱后才会揭晓是哪一种'
+            ? '还剩 <b>' + left.length + ' / ' + BLESSINGS.length + '</b> 种未获得，开箱揭晓'
             : '已获得全部祝福',
           disabled: left.length === 0
         }
@@ -1272,9 +1176,6 @@
       $('screenChest').classList.remove('hidden');
     },
 
-    /** 放弃宝库奖励。
-        没有这个出口时，一旦 opts 意外为空界面就会永久停在这里，
-        而其他选择界面（融合）都提供了跳过。 */
     skipChestReward() {
       this.chestOptions = [];
       $('screenChest').classList.add('hidden');
@@ -1285,7 +1186,6 @@
     applyChestReward(id) {
       const p = this.player;
       if (id === 'codex') {
-        // 立刻提升三级：等级 +3 并给 3 次事件选择
         for (let i = 0; i < 3; i++) {
           p.level++;
           p.xpNext = Player.xpNeed(p.level);
@@ -1311,19 +1211,17 @@
       $('screenChest').classList.add('hidden');
       FX.ring(p.x, p.y, '#ffd23c', 20, 220, 0.7, 6);
 
-      // 智库给的次数要立刻兑现；其余回到游戏
       this.state = 'playing';
       Input.reset();
       if (this.pendingLevelUps > 0) this.openLevelUp();
     },
 
-    /* ---------------- 祝福 ---------------- */
     grantBlessing(id) {
       const p = this.player;
       const b = BLESSINGS.find(x => x.id === id);
       if (!b || p.blessing[id]) return;
       p.blessing[id] = true;
-      if (id === 'roar') this.roarCd = 0;      // 拿到即可用
+      if (id === 'roar') this.roarCd = 0;
       this.toast('★ 祝 福 · ' + b.name + ' ★');
       FX.ring(p.x, p.y, b.color, 14, 190, 0.7, 5);
       FX.burst(p.x, p.y, b.color, 40, { speed: 300, life: 0.9, size: 3.2 });
@@ -1331,7 +1229,6 @@
       Sfx.play('chest');
     },
 
-    /** 血族：每次击败敌人都有小概率回一点血（回血量刻意压得很低） */
     onEnemyKilled() {
       const p = this.player;
       if (!p || !p.blessing || !p.blessing.vampire) return;
@@ -1343,7 +1240,6 @@
       }
     },
 
-    /** 咆哮：消灭全屏敌人（领主除外），并吸收场上所有经验球 */
     useRoar() {
       const p = this.player;
       if (!p || !p.blessing || !p.blessing.roar) return false;
@@ -1351,11 +1247,9 @@
 
       this.roarCd = ROAR_CD;
       let n = 0;
-      // 立刻结算击杀（而不是留到下一帧），这样击杀掉落的数据晶体
-      // 也会被紧接着的「吸收所有经验球」一并收走。
       for (const e of Enemies.list.slice()) {
         if (e.dead || e.hp <= 0) continue;
-        if (e.isBoss) continue;             // 领主不吃咆哮
+        if (e.isBoss) continue;
         e.hp = 0;
         Enemies.kill(this, e);
         n++;
@@ -1371,7 +1265,6 @@
       return true;
     },
 
-    /* ---------------- 伤害与死亡 ---------------- */
     rollCrit() {
       const p = this.player;
       return Math.random() < p.critChance ? p.critMul : 1;
@@ -1383,8 +1276,6 @@
       Sfx.play('hurt');
       const real = Math.max(1, dmg * (1 - p.armor / (p.armor + 20)));
 
-      // 祝福「不灭」：致命伤留 1 点血 + 3 秒无敌，一次性。
-      // 紫色秒杀技（lethal）不在此列 —— 它就是拿来绕过一切保命手段的。
       if (!lethal && p.blessing && p.blessing.undying && p.hp - real <= 0) {
         p.blessing.undying = false;
         p.hp = 1;
@@ -1422,11 +1313,9 @@
       FX.addShake(20);
       FX.burst(p.x, p.y, '#38f0ff', 70, { speed: 340, life: 1, size: 3.4 });
 
-      // 无尽模式的成绩单独记录，不与常规通关混排
       const endlessOver = !!this.endless;
       const BEST_KEY = endlessOver ? 'neon_survivor_best_endless' : 'neon_survivor_best';
 
-      // 记录
       const rec = {
         time: this.time, kills: this.kills, level: p.level,
         damage: Math.round(this.damageDone), win: !!win, at: Date.now(),
@@ -1452,7 +1341,7 @@
       if (endlessOver) {
         stats +=
           statCard(U.formatTime(this.time - WIN_TIME), '无尽时长') +
-          statCard(rec.pct.toFixed(1) + '%', '二阶段领主伤害');
+          statCard(fmtPct(rec.pct), '领主伤害');
       }
       stats += statCard(this.weaponSummary(), '最终构筑');
       $('overStats').innerHTML = stats;
@@ -1464,7 +1353,6 @@
       $('screenOver').classList.remove('hidden');
     },
 
-    /* ---------------- HUD ---------------- */
     updateHUD() {
       const p = this.player;
       const hpR = U.clamp(p.hp / p.maxHp, 0, 1);
@@ -1480,11 +1368,10 @@
         const b = this.boss;
         $('bossWrap').classList.remove('hidden');
         if (b.phase2) {
-          // 二阶段：血量无限，以一阶段血量为 100% 记录玩家造成的伤害
           const pct = Enemies.phase2Pct(b);
           $('bossFill').style.width = '100%';
           $('bossFill').classList.add('infinite');
-          $('bossName').textContent = '◆ 领主 · 二阶段 ' + pct.toFixed(1) + '% ◆';
+          $('bossName').textContent = '◆ 领主 · 二阶段 ' + fmtPct(pct) + ' ◆';
           $('bossName').classList.add('p2');
         } else {
           $('bossFill').classList.remove('infinite');
@@ -1497,7 +1384,6 @@
       }
     },
 
-    /** 技能栏：按已装配的技能渲染固定 3 个槽位 */
     buildSkillBar() {
       const bar = $('skillBar');
       if (!bar) return;
@@ -1523,7 +1409,6 @@
         }
         bar.appendChild(el);
       }
-      // 咆哮（宝箱祝福）：独立槽位，键位 R，未获得时不显示
       const p = this.player;
       if (p && p.blessing && p.blessing.roar) {
         const b = BLESSINGS.find(x => x.id === 'roar');
@@ -1540,7 +1425,6 @@
       }
     },
 
-    /** 技能栏冷却：统一走这里，保证主动技能和咆哮的表现一致 */
     paintSkill(el, remain, cd, keyText) {
       if (!el) return;
       const k = U.clamp(remain / cd, 0, 1);
@@ -1549,7 +1433,6 @@
       const cooling = remain > 0.05;
       el.classList.toggle('ready', !cooling);
       el.classList.toggle('cooling', cooling);
-      // 冷却时把键位换成剩余秒数 —— 一眼就能看出还要等几秒
       const key = el.querySelector('.sk-key');
       if (key) {
         const txt = cooling ? (remain >= 10 ? Math.ceil(remain) : remain.toFixed(1)) : keyText;
@@ -1571,7 +1454,6 @@
         const def = Abilities.defs[id];
         this.paintSkill(el, Abilities.cd[id] || 0, def.cd, Abilities.slotKey(i));
       }
-      // 咆哮
       const p = this.player;
       const rel = $('sk-roar');
       if (rel && p && p.blessing && p.blessing.roar) {
@@ -1614,14 +1496,12 @@
         : '最佳记录：暂无';
     },
 
-    /* ---------------- 渲染 ---------------- */
     render() {
       const ctx = this.ctx;
       const w = this.w, h = this.h;
 
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-      // 背景
       const bg = ctx.createLinearGradient(0, 0, 0, h);
       bg.addColorStop(0, '#070a16');
       bg.addColorStop(1, '#04050c');
@@ -1631,7 +1511,6 @@
       this.drawStars(ctx);
       this.drawGrid(ctx);
 
-      // 相机
       let ox = -this.cam.x + w / 2;
       let oy = -this.cam.y + h / 2;
       if (FX.shake > 0.2) {
@@ -1641,14 +1520,11 @@
       ctx.save();
       ctx.translate(ox, oy);
 
-      // 蓄力预警画在地面层，保证不被怪物遮挡
       Telegraph.draw(ctx);
-      Abilities.drawGhosts(ctx);
 
       this.drawGems(ctx);
       this.drawHeals(ctx);
 
-      // 玩家（能量场 / 环绕核心画在敌人下方）
       if (this.player && this.state !== 'menu') {
         this.player.drawWeaponFx(ctx, this);
       }
@@ -1666,7 +1542,6 @@
 
       ctx.restore();
 
-      // 屏幕闪光
       if (FX.flash > 0.01) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
@@ -1675,7 +1550,6 @@
         ctx.restore();
       }
 
-      // 低血量红边
       if (this.player && this.state === 'playing') {
         const r = this.player.hp / this.player.maxHp;
         if (r < 0.3) {
@@ -1686,6 +1560,7 @@
           ctx.fillStyle = g;
           ctx.fillRect(0, 0, w, h);
         }
+        Input.draw(ctx);
       }
     },
 
@@ -1732,7 +1607,6 @@
       for (let i = 0; i < G.length; i++) {
         const g = G[i];
         ctx.fillStyle = g.color;
-        // 外圈柔和光晕（比 shadowBlur 快得多，同屏数百个时差距明显）
         ctx.globalAlpha = 0.28;
         ctx.beginPath();
         ctx.moveTo(g.x, g.y - g.r * 2);
@@ -1798,6 +1672,11 @@
     g.val += val;
     g.r = Math.min(10, 3 + Math.sqrt(g.val) * 0.9);
     g.color = g.val >= 6 ? '#ffd23c' : (g.val >= 2.5 ? '#9dff3c' : '#38f0ff');
+  }
+
+  function fmtPct(v) {
+    if (v >= 1000) return Math.round(v).toLocaleString('en-US') + '%';
+    return v.toFixed(1) + '%';
   }
 
   function statCard(v, k) {

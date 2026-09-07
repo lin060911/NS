@@ -1,7 +1,3 @@
-/* ===== telegraph.js · 蓄力预警与范围攻击 =====
-   精英 / 领主的攻击先亮出半透明图形，再随时间「填充」到满，
-   填满瞬间才真正结算伤害 —— 给玩家留出反应空间。
-=========================================================== */
 (function (global) {
   'use strict';
 
@@ -9,7 +5,6 @@
   const FX = global.FX;
   const TAU = Math.PI * 2;
 
-  /* ---------- 范围伤害判定辅助 ---------- */
   function inCone(e, x, y, angle, spread, len) {
     const d2 = U.dist2(x, y, e.x, e.y);
     if (d2 > (len + e.r) * (len + e.r)) return false;
@@ -32,18 +27,6 @@
 
     reset() { this.list.length = 0; },
 
-    /**
-     * @param cfg {
-     *   shape: 'cone' | 'line' | 'circle',
-     *   x, y, angle, len, radius, spread, width,
-     *   warn: 蓄力秒数, color,
-     *   follow: 跟随的敌人（可选，移动时预警跟随；死亡则取消）,
-     *   lockAngle: 锁定方向（默认 true，蓄力期间不再转向）,
-     *   aimUntil: 未锁角时的追踪截止点，按蓄力进度 0~1 计（默认 0.3）。
-     *             追踪期过后方向即锁死 —— 否则图形会一路咬着玩家转。
-     *   dmg, onFire(G, cfg)
-     * }
-     */
     add(cfg) {
       cfg.t = 0;
       cfg.warn = cfg.warn || 1.1;
@@ -61,7 +44,6 @@
       for (let i = L.length - 1; i >= 0; i--) {
         const c = L[i];
 
-        // 施法者中途死亡 → 取消
         if (c.follow && (c.follow.dead || c.follow.hp <= 0)) {
           L.splice(i, 1);
           continue;
@@ -70,9 +52,6 @@
           c.x = c.follow.x;
           c.y = c.follow.y;
         }
-        // 追踪只发生在蓄力前期，之后锁死方向。
-        // 全程追踪等于不可躲避：图形会一直咬着玩家转，往哪走都在范围内，
-        // 这与「看到预警就能躲开」的设计意图直接冲突。
         if (!c.lockAngle && G.player) {
           const aimUntil = c.aimUntil === undefined ? 0.3 : c.aimUntil;
           if (c.t < aimUntil * c.warn) {
@@ -94,7 +73,6 @@
       ctx.save();
       for (const c of L) {
         const k = U.clamp(c.t / c.warn, 0, 1);
-        // 最后阶段整体闪烁提示「要放了」；秒杀技闪得更凶
         const blink = k > 0.72 ? (Math.sin(c.t * (c.lethal ? 64 : 42)) * 0.5 + 0.5) * (c.lethal ? 0.75 : 0.45) + (c.lethal ? 0.25 : 0.55) : 1;
         const lw = c.lethal ? 4 : 2;
 
@@ -102,7 +80,6 @@
         if (c.shape === 'cone') {
           const len = c.len * k;
           const half = (c.spread || Math.PI / 3) / 2;
-          // 外框（完整范围）
           ctx.beginPath();
           ctx.moveTo(c.x, c.y);
           ctx.arc(c.x, c.y, c.len, c.angle - half, c.angle + half);
@@ -110,7 +87,6 @@
           ctx.strokeStyle = c.lethal ? 'rgba(177,77,255,.72)' : 'rgba(255,45,77,.5)';
           ctx.lineWidth = lw;
           ctx.stroke();
-          // 填充（进度）
           ctx.beginPath();
           ctx.moveTo(c.x, c.y);
           ctx.arc(c.x, c.y, len, c.angle - half, c.angle + half);
@@ -127,11 +103,9 @@
           ctx.save();
           ctx.translate(c.x, c.y);
           ctx.rotate(c.angle);
-          // 外框
           ctx.strokeStyle = c.lethal ? 'rgba(177,77,255,.7)' : 'rgba(255,45,77,.45)';
           ctx.lineWidth = lw * 0.8;
           ctx.strokeRect(0, -w / 2, c.len, w);
-          // 填充
           ctx.fillStyle = withAlpha(c.color, (0.18 + k * 0.34) * blink);
           ctx.fillRect(0, -w / 2, len, w);
           ctx.strokeStyle = withAlpha(c.color, 0.95 * blink);
@@ -154,7 +128,6 @@
           ctx.lineWidth = 2.5;
           ctx.stroke();
         }
-        // 秒杀技：中心叠加醒目的骷髅标记，与普通红色预警一眼区分
         if (c.lethal) {
           ctx.save();
           ctx.translate(c.x, c.y);
@@ -180,7 +153,6 @@
       ctx.restore();
     },
 
-    /* ---------- 攻击结算：由敌人在 onFire 中调用 ---------- */
     damageInCone(G, c) {
       const list = global.Enemies.near(c.x + Math.cos(c.angle) * c.len / 2,
         c.y + Math.sin(c.angle) * c.len / 2, c.len / 2 + 40);
@@ -190,7 +162,6 @@
           global.Enemies.damage(G, e, c.dmg, { angle: U.angle(c.x, c.y, e.x, e.y), knock: 160 });
         }
       }
-      // 命中玩家
       const p = G.player;
       if (inCone({ x: p.x, y: p.y, r: p.r }, c.x, c.y, c.angle, c.spread, c.len)) {
         Telegraph.strikePlayer(G, c);
@@ -214,21 +185,15 @@
       fxLine(c);
     },
 
-    /**
-     * 结算对玩家的命中。
-     * lethal（紫色预警）为秒杀技：无敌帧或永动壁垒可以躲过，否则直接致命。
-     */
     strikePlayer(G, c) {
       const p = G.player;
       if (!c.lethal) { G.hurtPlayer(c.dmg, c.follow); return; }
 
-      // 相位冲刺的无敌帧
       if (p.invuln > 0) {
         FX.text(p.x, p.y - 34, '闪 避', '#ffffff', { size: 16, life: 0.8 });
         FX.ring(p.x, p.y, '#ffffff', 10, 60, 0.3, 3);
         return;
       }
-      // 永动壁垒：消耗壁垒硬吃一次
       if (p.bulwark > 0) {
         p.bulwark = 0;
         FX.ring(p.x, p.y, '#9b6bff', 16, 150, 0.5, 5);
@@ -237,12 +202,10 @@
         global.Sfx.play('chest');
         return;
       }
-      // 真的躲不掉
-      G.hurtPlayer(1e9, c.follow, true);   // lethal：绕过不灭等保命手段
+      G.hurtPlayer(1e9, c.follow, true);
     },
 
     damageInCircle(G, c) {
-      // silent：只是「到点了」的触发器，用来生成弹幕或召唤，不该有爆炸表现
       if (c.silent) return;
       const list = global.Enemies.near(c.x, c.y, c.radius);
       for (const e of list) {
@@ -281,7 +244,6 @@
     global.Sfx.play('beam');
   }
 
-  /** 把 #rrggbb 或 rgb 转成带 alpha 的 rgba 字符串 */
   function withAlpha(color, a) {
     if (color[0] === '#') {
       const h = color.slice(1);

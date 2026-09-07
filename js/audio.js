@@ -1,4 +1,3 @@
-/* ===== audio.js · 纯 WebAudio 程序化音效（无需任何音频文件）===== */
 (function (global) {
   'use strict';
 
@@ -26,7 +25,7 @@
 
     resume() {
       if (this.ok && this.ac.state === 'suspended') {
-        try { this.ac.resume(); } catch (e) { /* 忽略 */ }
+        try { this.ac.resume(); } catch (e) {  }
       }
     },
 
@@ -36,7 +35,6 @@
       return this.enabled;
     },
 
-    /** 节流：同一音效在 gap 秒内只响一次 */
     _throttle(key, gap) {
       const t = this.ac ? this.ac.currentTime : 0;
       if (this._last[key] !== undefined && t - this._last[key] < gap) return false;
@@ -63,7 +61,7 @@
         g.connect(this.master);
         o.start(t0);
         o.stop(t0 + dur + 0.03);
-      } catch (e) { /* 忽略 */ }
+      } catch (e) {  }
     },
 
     play(kind) {

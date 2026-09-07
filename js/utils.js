@@ -1,4 +1,3 @@
-/* ===== utils.js · 通用工具 ===== */
 (function (global) {
   'use strict';
 
@@ -11,7 +10,6 @@
   U.pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   U.chance = (p) => Math.random() < p;
   U.clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-  U.lerp = (a, b, t) => a + (b - a) * t;
 
   U.dist2 = function (ax, ay, bx, by) {
     const dx = ax - bx, dy = ay - by;
@@ -22,7 +20,6 @@
   };
   U.angle = (ax, ay, bx, by) => Math.atan2(by - ay, bx - ax);
 
-  /** 点到线段的距离（光束 / 激光横扫判定用） */
   U.distToSeg = function (px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const l2 = dx * dx + dy * dy;
@@ -32,7 +29,6 @@
     return U.dist(px, py, x1 + t * dx, y1 + t * dy);
   };
 
-  /** 角度差归一化到 [-PI, PI] */
   U.angDiff = function (a, b) {
     let d = (b - a) % U.TAU;
     if (d > Math.PI) d -= U.TAU;
@@ -48,14 +44,6 @@
     return arr;
   };
 
-  /** 从数组中取 n 个不重复元素（不修改原数组） */
-  U.sample = function (arr, n) {
-    const c = arr.slice();
-    U.shuffle(c);
-    return c.slice(0, n);
-  };
-
-  /** 带权随机：items = [{w: number, ...}] */
   U.weighted = function (items) {
     let total = 0;
     for (const it of items) total += (it.w || 1);
@@ -84,7 +72,6 @@
     ctx.closePath();
   };
 
-  /** 画正多边形 */
   U.poly = function (ctx, x, y, r, sides, rot) {
     ctx.beginPath();
     for (let i = 0; i < sides; i++) {
@@ -95,7 +82,6 @@
     ctx.closePath();
   };
 
-  /** localStorage 安全读写 */
   U.store = {
     get(key, def) {
       try {
@@ -104,11 +90,10 @@
       } catch (e) { return def; }
     },
     set(key, val) {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* 忽略 */ }
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {  }
     }
   };
 
-  /* 统一字体栈：canvas 绘制与 CSS 保持一致 */
   global.FONT_MONO = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
   global.FONT_UI = "system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif";
 

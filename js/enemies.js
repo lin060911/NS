@@ -1,4 +1,3 @@
-/* ===== enemies.js · 敌人类型 / 生成 / 更新 / 绘制 / 空间网格 ===== */
 (function (global) {
   'use strict';
 
@@ -6,14 +5,12 @@
   const FX = global.FX;
   const TAU = Math.PI * 2;
 
-  /* ---------------- 敌人原型 ---------------- */
-  /* 全怪物生命值整体倍率（含领主）。数值越大越硬。 */
-  const HP_SCALE = 7.5;   // 原 4.5 × 3
-  /* 全怪物伤害倍率（接触伤害、子弹、领主招式一并生效）。 */
+  const BAL = global.BAL;
+  const HP_SCALE = BAL.HP_SCALE;
   const DMG_SCALE = 1;
+  const FIRE_CD_MUL = 1.45;
+  const VOLLEY_MUL = 0.65;
 
-  /* 敌方弹幕的统一颜色。所有敌人（含领主）打出的子弹都用这一个颜色，
-     这样玩家一眼就能认出「这是要躲的」，不会被我方的霓虹配色混淆。 */
   const BULLET_COLOR = '#ff3700';
 
   const TYPES = {
@@ -34,7 +31,6 @@
       shape: 'diamond', color: '#38f0ff', mass: 1, ranged: true,
       range: 300, shootCd: 2.1, bulletSpeed: 210, volley: 1
     },
-    /* ---- 弹幕型 ---- */
     spreader: {
       name: '散射体', hp: 30, speed: 58, dmg: 8, r: 14, xp: 3, armor: 2,
       shape: 'diamond', color: '#ff9f43', mass: 1.1, ranged: true,
@@ -72,13 +68,12 @@
       shape: 'hex', color: '#9b6bff', mass: 2.4
     },
     boss: {
-      name: '领主', hp: 1800, speed: 64, dmg: 30, r: 42, xp: 110, armor: 14,
+      name: '领主', hp: 8500, speed: 64, dmg: 38, r: 42, xp: 110, armor: 14,
       shape: 'boss', color: '#ff3ec8', mass: 8, isBoss: true,
       ranged: true, range: 460, shootCd: 2.6, bulletSpeed: 195
     }
   };
 
-  /* ---------------- 空间网格 ---------------- */
   function Grid(cell) {
     this.cell = cell;
     this.map = new Map();
@@ -93,7 +88,6 @@
     if (!arr) { arr = []; this.map.set(k, arr); }
     arr.push(e);
   };
-  /** 收集以 (x,y) 为中心、半径 r 覆盖的格子里所有实体 */
   Grid.prototype.query = function (x, y, r, out) {
     out.length = 0;
     const c = this.cell;
@@ -109,7 +103,6 @@
     return out;
   };
 
-  /* ---------------- 敌人精灵缓存（避免每帧 shadowBlur，保证大批量同屏时的帧率）---------------- */
   const _sprites = new Map();
 
   function spriteFor(e, flash) {
@@ -176,7 +169,6 @@
     return cv;
   }
 
-  /** 领主绘制：普通领主沿用旧版造型，最终领主有独立造型 */
   function drawBoss(ctx, e, flash) {
     if (e.isFinal) return drawFinalBoss(ctx, e, flash);
 
@@ -210,7 +202,6 @@
     ctx.restore();
   }
 
-  /** 最终领主：三重旋转外环 + 六向尖刺 + 脉动核心，二阶段转紫并裂开 */
   function drawFinalBoss(ctx, e, flash) {
     const p2 = !!e.phase2;
     const t = e.animT || 0;
@@ -222,7 +213,6 @@
     ctx.save();
     ctx.translate(e.x, e.y);
 
-    /* 外辉光 */
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const glowR = r * (p2 ? 3.2 : 2.6);
@@ -235,7 +225,6 @@
     ctx.fill();
     ctx.restore();
 
-    /* 三重反向旋转外环 */
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = 2.2;
@@ -251,7 +240,6 @@
     }
     ctx.restore();
 
-    /* 六向尖刺 */
     ctx.save();
     ctx.rotate(t * (p2 ? 0.7 : 0.32));
     ctx.strokeStyle = col;
@@ -264,7 +252,6 @@
       ctx.moveTo(Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92);
       ctx.lineTo(Math.cos(a) * r * 1.62, Math.sin(a) * r * 1.62);
       ctx.stroke();
-      // 尖端菱形
       ctx.save();
       ctx.translate(Math.cos(a) * r * 1.72, Math.sin(a) * r * 1.72);
       ctx.rotate(a);
@@ -275,7 +262,6 @@
     }
     ctx.restore();
 
-    /* 主体 */
     ctx.save();
     ctx.rotate(e.face);
     ctx.shadowColor = col;
@@ -286,7 +272,6 @@
     U.poly(ctx, 0, 0, r, 6, e.wob); ctx.fill(); ctx.stroke();
     U.poly(ctx, 0, 0, r * 0.66, 6, -e.wob * 1.5); ctx.stroke();
 
-    /* 二阶段裂纹：从中心向外的锯齿 */
     if (p2) {
       ctx.save();
       ctx.strokeStyle = 'rgba(255,255,255,.7)';
@@ -311,7 +296,6 @@
     }
     ctx.restore();
 
-    /* 脉动核心 */
     const pulse = 0.72 + Math.sin(t * (p2 ? 7 : 4.2)) * 0.28;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -332,14 +316,11 @@
     ctx.restore();
   }
 
-  /* ---------------- 模块 ---------------- */
   const Enemies = {
     TYPES: TYPES,
     list: [],
-    bullets: [],     // 敌方子弹
+    bullets: [],
     grid: new Grid(72),
-    /* 缓冲区分开：nearest（索敌，内部即用即弃）/ near（范围收集，调用方会遍历）
-       / 分离（update 内遍历）三者互不干扰，避免嵌套调用覆盖同一数组 */
     _q: [],
     _nearBuf: [],
     _sepBuf: [],
@@ -350,40 +331,31 @@
       this.grid.clear();
     },
 
-    /** 难度随时间成长 */
-    /* 全局血量倍率：整体上调敌人生命值，让弹珠的成长感更明显。
-       调这一个数就能整体改难度，不用逐个改单位原型。 */
     HP_SCALE: HP_SCALE,
     DMG_SCALE: DMG_SCALE,
     BULLET_COLOR: BULLET_COLOR,
 
     diff(time, G) {
-      // 无尽模式下时间继续累积，成长不再封顶
       const endless = G && G.endless;
       const t = time;
-      const creep = Math.max(0, t - 300) / 600;
-
-      // 无尽的额外强化从「进入无尽的那一刻」起算，并随时间二次加速。
-      // 若直接用绝对时间，按下「继续挑战」的瞬间敌人会立刻强 3 倍，
-      // 那是一堵墙而不是爬坡 —— 玩家连反应机会都没有。
       let endRamp = 0;
       if (endless) {
         const since = Math.max(0, t - (G.endlessStart || t));
-        endRamp = since / 60;              // 进入无尽后的分钟数
+        endRamp = since / 60;
       }
-      const endHp = endRamp * 2.0 + endRamp * endRamp * 1.1;
+      const endHp = endRamp * BAL.HP_END_A + endRamp * endRamp * BAL.HP_END_B;
       const endSpd = Math.min(0.7, endRamp * 0.16);
       const endDmg = Math.min(2.0, endRamp * 0.45);
 
       return {
-        hpMul: Math.pow(1.20, t / 60) * (1 + creep * 1.9 + endHp),
-        spdMul: 1 + Math.min(0.8, (t / 900) * 0.8) + endSpd,
-        dmgMul: 1 + Math.min(1.6, (t / 900) * 1.6) + endDmg,
-        armorMul: 1 + creep * 1.8 + endRamp * 1.2
+        hpMul: BAL.hpMul(t, endHp),
+        xpMul: BAL.xpMul(t, endRamp),
+        spdMul: 1 + Math.min(BAL.SPD_MAX, (t / BAL.WIN_TIME) * BAL.SPD_MAX) + endSpd,
+        dmgMul: 1 + Math.min(BAL.DMG_MAX, (t / BAL.WIN_TIME) * BAL.DMG_MAX) + endDmg,
+        armorMul: BAL.armorMul(t, endRamp)
       };
     },
 
-    /** 各时间段的敌人权重 */
     weights(time) {
       const w = [
         { t: 'grunt', w: 46 },
@@ -393,7 +365,6 @@
       if (time > 40) w.push({ t: 'shooter', w: 12 });
       if (time > 75) w.push({ t: 'tank', w: 11 });
       if (time > 130) w.push({ t: 'orbiter', w: 14 });
-      // 弹幕型：陆续登场，让后期躲弹幕成为主要压力来源
       if (time > 105) w.push({ t: 'spreader', w: 13 });
       if (time > 175) w.push({ t: 'spinner', w: 12 });
       if (time > 215) w.push({ t: 'sniper', w: 9 });
@@ -428,14 +399,14 @@
       const T = TYPES[type];
       const d = this.diff(time, G);
       const hp = Math.round(T.hp * HP_SCALE * d.hpMul);
-      return {
+      const e = {
         type: type, proto: T,
         x: x, y: y, vx: 0, vy: 0,
         hp: hp, maxHp: hp,
         speed: T.speed * d.spdMul * U.rand(0.92, 1.08),
         dmg: T.dmg * d.dmgMul * DMG_SCALE,
         r: T.r,
-        xp: T.xp,
+        xp: Math.max(1, Math.round(T.xp * d.xpMul)),
         armor: Math.round((T.armor || 0) * (d.armorMul || 1)),
         color: T.color,
         shape: T.shape,
@@ -447,7 +418,7 @@
         face: U.rand(0, TAU),
         spin: U.rand(-1.6, 1.6),
         wob: U.rand(0, TAU),
-        shootCd: T.shootCd ? U.rand(0.6, T.shootCd) : 0,
+        shootCd: T.shootCd ? U.rand(0.6, T.shootCd) * FIRE_CD_MUL : 0,
         orbitDir: U.chance(0.5) ? 1 : -1,
         dead: false,
         slowT: 0,
@@ -456,18 +427,12 @@
         eliteSkill: U.pick(['cone', 'line', 'circle']),
         skillCd: U.rand(3.5, 6),
         casting: false,
-        // 效果状态
-        burn: null, frozen: 0, frostStack: 0, slowT: 0, slowAmt: 0,
+        burn: null, frozen: 0, frostStack: 0, slowT: 0,
         venomStack: 0, venomT: 0,
         paralyze: 0, armorBreak: 0, armorBreakT: 0,
-        markT: 0, markAmt: 0,
-        focusStack: 0, focusT: 0,
-        shatter: 0,
-        // 二阶段（无尽）：血量无限，记录累计伤害
         phase2: false, dmgTaken: 0
       };
 
-      // 精英个体：更硬、更值钱，且拥有带预警的特殊攻击
       if (!T.isBoss && time > 90 && Math.random() < Math.min(0.16, 0.03 + time / 900 * 0.13)) {
         e.elite = true;
         e.maxHp = Math.round(e.maxHp * 6);
@@ -482,7 +447,6 @@
       return e;
     },
 
-    /** 在玩家视野外的圆环上生成 */
     spawnRing(G, type, count) {
       const p = G.player;
       const rad = Math.max(G.w, G.h) * 0.62 + 90;
@@ -498,11 +462,9 @@
       const p = G.player;
       const a = Math.random() * TAU;
       const d = Math.max(G.w, G.h) * 0.6 + 120;
-      // 领主同样随「降临时间」成长（取 0.6 系数，避免与逐位强化叠乘后失控）
-      const e = this.make('boss', p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, G.time * 0.6, G);
+      const e = this.make('boss', p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, Math.min(G.time, BAL.BOSS_TIME_CAP), G);
       e.bossIndex = index;
-      // 后续领主更强
-      const boost = 1 + index * 0.55;
+      const boost = BAL.BOSS_HP_MUL[index] || 1;
       e.maxHp = Math.round(e.maxHp * boost);
       e.hp = e.maxHp;
       e.xp = Math.round(e.xp * (1 + index * 0.5));
@@ -515,18 +477,16 @@
       return e;
     },
 
-    /** 最终领主：15 分钟降临，击败即为通关 */
     spawnFinalBoss(G) {
       const p = G.player;
       const a = Math.random() * TAU;
       const d = Math.max(G.w, G.h) * 0.6 + 120;
-      const e = this.make('boss', p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, G.time * 0.6, G);
+      const e = this.make('boss', p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, Math.min(G.time, BAL.BOSS_TIME_CAP), G);
       e.isFinal = true;
       e.bossIndex = 5;
-      // 显著强于最后一位常规领主
-      e.maxHp = Math.round(e.maxHp * 4.5);
+      e.maxHp = Math.round(e.maxHp * BAL.FINAL_HP_MUL);
       e.hp = e.maxHp;
-      e.r = Math.round(e.r * 1.3);      // 体型更大，配合专属造型
+      e.r = Math.round(e.r * 1.3);
       e.dmg *= 1.4;
       e.speed *= 1.18;
       e.xp = 420;
@@ -541,12 +501,11 @@
       return e;
     },
 
-    /** 进入二阶段：血量无限、出招更密更痛，并周期性释放紫色秒杀技 */
     enterPhase2(G, e) {
       if (!e || e.phase2) return;
       e.phase2 = true;
       e.dmgTaken = 0;
-      e.hp = e.maxHp;             // 锁血
+      e.hp = e.maxHp;
       e.dmg *= 1.55;
       e.speed *= 1.22;
       e.skillCd = 1.2;
@@ -559,13 +518,11 @@
       Sfx.play('boss');
     },
 
-    /** 二阶段累计伤害占一阶段血量的百分比 */
     phase2Pct(e) {
       if (!e || !e.phase2 || !e.maxHp) return 0;
-      return Math.min(999, e.dmgTaken / e.maxHp * 100);
+      return e.dmgTaken / e.maxHp * 100;
     },
 
-    /* ---- 查询 ---- */
     rebuildGrid() {
       const g = this.grid;
       g.clear();
@@ -577,7 +534,6 @@
       return this.grid.query(x, y, r, this._nearBuf);
     },
 
-    /** 最近敌人（可排除列表） */
     nearest(x, y, maxR, exclude) {
       const cand = this.grid.query(x, y, maxR, this._q);
       let best = null, bd = maxR * maxR;
@@ -591,11 +547,10 @@
       return best;
     },
 
-    /* ---- 更新 ---- */
     update(G, dt) {
       const p = G.player;
       const L = this.list;
-      const sep = 0.55;   // 分离强度
+      const sep = 0.55;
 
       for (let i = L.length - 1; i >= 0; i--) {
         const e = L[i];
@@ -609,21 +564,17 @@
         if (e.slowT > 0) e.slowT -= dt;
         e.animT = (e.animT || 0) + dt;
 
-        // 效果持续结算：被冰封 / 麻痹时完全停摆（燃烧与剧毒在 tick 内结算）
         if (global.Effects.tick(G, e, dt)) continue;
 
-        // 击退衰减
         e.x += e.kx * dt;
         e.y += e.ky * dt;
         const kd = Math.exp(-9 * dt);
         e.kx *= kd; e.ky *= kd;
 
-        // 朝向玩家
         const dx = p.x - e.x, dy = p.y - e.y;
         const dist = Math.hypot(dx, dy) || 1;
         let mvx = dx / dist, mvy = dy / dist;
 
-        // 游猎者：螺旋接近
         if (e.proto.orbit) {
           const tangentX = -mvy * e.orbitDir, tangentY = mvx * e.orbitDir;
           const k = U.clamp((dist - 140) / 160, 0, 1);
@@ -633,7 +584,6 @@
           mvx /= n; mvy /= n;
         }
 
-        // 远程敌人：保持距离
         let speed = e.speed * (e.slowT > 0 ? 0.55 : 1);
         if (e.proto.ranged && !e.isBoss) {
           const want = e.proto.range * 0.62;
@@ -645,7 +595,6 @@
         e.y += mvy * speed * dt;
         e.face = Math.atan2(mvy, mvx);
 
-        // 分离（避免完全重叠）
         if (!e.isBoss) {
           const cand = this.grid.query(e.x, e.y, e.r + 20, this._sepBuf);
           for (let j = 0; j < cand.length; j++) {
@@ -663,19 +612,14 @@
           }
         }
 
-        // 远程射击
         if (e.proto.ranged && dist < e.proto.range) {
           e.shootCd -= dt;
           if (e.shootCd <= 0) {
-            e.shootCd = e.proto.shootCd * U.rand(0.85, 1.2);
+            e.shootCd = e.proto.shootCd * U.rand(0.85, 1.2) * FIRE_CD_MUL;
             this.shoot(G, e, dx / dist, dy / dist);
           }
         }
 
-        // 精英 / 领主：带蓄力预警的特殊攻击
-        // 蓄力攻击。casting 由招式的 onFire 清除，但施法者中途被秒杀时
-        // 预警会被 Telegraph 直接取消、onFire 永远不触发 —— 那样 casting
-        // 会永久卡住，这只精英 / 领主从此再也不出招。这里加个看门狗兜底。
         if (e.elite || e.isBoss) {
           if (e.casting) {
             e.castT = (e.castT || 0) + dt;
@@ -686,12 +630,10 @@
           }
         }
 
-        // 接触伤害
         if (dist < e.r + p.r) {
           G.hurtPlayer(e.dmg, e);
         }
 
-        // 跑太远回收
         if (dist > Math.max(G.w, G.h) * 1.6 + 900) {
           e.hp = 0; e.dead = true;
           L.splice(i, 1);
@@ -701,11 +643,6 @@
       this.updateBullets(G, dt);
     },
 
-    /* ---------- 精英 / 领主的蓄力攻击 ---------- */
-    /* ---------- 领主招式池 ----------
-       每一项都是「一个完整的招式」：设定冷却、摆出预警、结算伤害。
-       minPhase 表示从第几阶段开始才会用（阶段按剩余血量划分），
-       越到后面可用招式越多，节奏也越紧。 */
     BOSS_MOVES: [
       {
         id: 'wave', name: '扇形冲击波', minPhase: 1,
@@ -714,7 +651,7 @@
           T.add({
             shape: 'cone', follow: e, lockAngle: false,
             angle: U.angle(e.x, e.y, G.player.x, G.player.y),
-            spread: 1.9, len: 380, warn: 2.5, color: '#ff2d4d',
+            spread: 1.9, len: 380, warn: 1.6, color: '#ff2d4d',
             dmg: e.dmg * 1.25,
             onFire: (GG, c) => { done(); T.damageInCone(GG, c); }
           });
@@ -724,15 +661,14 @@
         id: 'ringBarrage', name: '环形弹幕', minPhase: 1,
         cast(G, e, T, done) {
           e.skillCd = 3.4;
-          // 三轮环形弹幕，每轮错开半档角度 —— 靠走位找缝隙穿过去
-          for (let k = 0; k < 3; k++) {
+          for (let k = 0; k < 2; k++) {
             const off = k * 0.22;
             T.add({
               shape: 'circle', follow: e, radius: 120, warn: 0.5 + k * 0.32,
               color: '#ff7a3d', dmg: 0, silent: true,
               onFire: (GG, c) => {
                 done();
-                const n = 14;
+                const n = 8;
                 for (let i = 0; i < n; i++) {
                   const a = off + (i / n) * TAU;
                   GG.bullets = GG.bullets || [];
@@ -760,7 +696,6 @@
             onFire: (GG, c) => {
               done();
               T.damageInLine(GG, c);
-              // 冲撞本体：沿着预警方向扑出去
               e.kx = Math.cos(ang) * 520;
               e.ky = Math.sin(ang) * 520;
               FX.addShake(10);
@@ -788,7 +723,6 @@
         id: 'sweepLaser', name: '旋转扫射', minPhase: 2,
         cast(G, e, T, done) {
           e.skillCd = 4.2;
-          // 六道激光依次亮起并结算，像风车一样扫过全场
           const base = U.angle(e.x, e.y, G.player.x, G.player.y);
           for (let i = 0; i < 6; i++) {
             T.add({
@@ -808,7 +742,6 @@
           const p = G.player;
           const n = 7;
           for (let i = 0; i < n; i++) {
-            // 一半铺在玩家周围，一半随机撒在场地里
             const near = i < 4;
             const a = Math.random() * TAU;
             const d = near ? U.rand(60, 300) : U.rand(150, 460);
@@ -826,7 +759,7 @@
         cast(G, e, T, done) {
           e.skillCd = 5.6;
           T.add({
-            shape: 'circle', follow: e, radius: 340, warn: 2.0, color: '#ff2d4d',
+            shape: 'circle', follow: e, radius: 340, warn: 1.7, color: '#ff2d4d',
             dmg: e.dmg * 1.5,
             onFire: (GG, c) => { done(); T.damageInCircle(GG, c); }
           });
@@ -836,18 +769,17 @@
         id: 'gridLaser', name: '激光网', minPhase: 3,
         cast(G, e, T, done) {
           e.skillCd = 5.2;
-          // 横竖各三道，把场地切成格子 —— 站在格子中间才安全
           const p = G.player;
           for (let i = -1; i <= 1; i++) {
             T.add({
               shape: 'line', x: p.x - 700, y: p.y + i * 190,
-              angle: 0, len: 1400, width: 40, warn: 2.0, color: '#ff2d4d',
+              angle: 0, len: 1400, width: 40, warn: 1.6, color: '#ff2d4d',
               dmg: e.dmg * 1.2,
               onFire: (GG, c) => { done(); T.damageInLine(GG, c); }
             });
             T.add({
               shape: 'line', x: p.x + i * 190, y: p.y - 700,
-              angle: Math.PI / 2, len: 1400, width: 40, warn: 2.0, color: '#ff2d4d',
+              angle: Math.PI / 2, len: 1400, width: 40, warn: 1.6, color: '#ff2d4d',
               dmg: e.dmg * 1.2,
               onFire: (GG, c) => { done(); T.damageInLine(GG, c); }
             });
@@ -886,8 +818,8 @@
             dmg: 0, silent: true,
             onFire: (GG, c) => {
               done();
-              for (let i = 0; i < 6; i++) {
-                const a = (i / 6) * TAU;
+              for (let i = 0; i < 4; i++) {
+                const a = (i / 4) * TAU;
                 Enemies.bullets.push({
                   x: c.x, y: c.y,
                   vx: Math.cos(a) * 150, vy: Math.sin(a) * 150,
@@ -902,14 +834,7 @@
       }
     ],
 
-    /**
-     * 领主出招：按剩余血量划分阶段，阶段越高可用招式越多、间隔越短。
-     * 招式从 BOSS_MOVES 里按阶段过滤后随机抽 —— 连续两次不重样，
-     * 免得一直放同一招变成背板。
-     * 无尽模式的二阶段（phase2）另有一套更凶的连招，见下方分支。
-     */
     bossAttack(G, e, T, dist) {
-      // 无尽二阶段：血量无限，按累计伤害推进狂暴程度
       if (e.phase2) return this.bossAttackP2(G, e, T);
 
       const hpR = e.hp / e.maxHp;
@@ -918,7 +843,6 @@
       const pool = this.BOSS_MOVES.filter((m) => m.minPhase <= phase);
       if (!pool.length) return;
 
-      // 不连用同一招
       let pick = U.pick(pool);
       if (pool.length > 1 && pick.id === e.lastMove) {
         pick = U.pick(pool.filter((m) => m.id !== e.lastMove));
@@ -927,7 +851,6 @@
 
       e.casting = true;
       const done = () => { e.casting = false; };
-      // 低阶段出招更慢，高压阶段收紧冷却
       const pace = phase >= 3 ? 0.78 : (phase === 2 ? 0.9 : 1);
       const before = e.skillCd;
       pick.cast(G, e, T, done);
@@ -938,11 +861,9 @@
       Sfx.play('boss');
     },
 
-    /** 无尽二阶段：紫色秒杀技穿插在连招里，逼玩家一直走位 */
     bossAttackP2(G, e, T) {
       e.p2count = (e.p2count || 0) + 1;
 
-      // 每三招来一次紫色秒杀：锁定释放瞬间的位置，必须跑出去
       if (e.p2count % 3 === 0) {
         e.skillCd = 5.0;
         e.casting = true;
@@ -966,7 +887,7 @@
       e.casting = true;
       const done = () => { e.casting = false; };
       pick.cast(G, e, T, done);
-      e.skillCd = Math.max(1.0, e.skillCd * 0.72);   // 二阶段整体提速
+      e.skillCd = Math.max(1.0, e.skillCd * 0.72);
       Sfx.play('boss');
     },
 
@@ -978,7 +899,6 @@
 
       if (e.isBoss) return this.bossAttack(G, e, T, dist);
 
-      // ---- 精英：三种预警攻击之一 ----
       e.casting = true;
       const clear = (GG, c) => { e.casting = false; };
 
@@ -1013,14 +933,6 @@
       }
     },
 
-    /**
-     * 远程射击。弹幕型敌人按 proto 的字段决定形态：
-     *   volley   一次打出几发
-     *   spread   扇形张角（弧度）
-     *   ring     环形一圈均分
-     *   spiral   螺旋：每次整体旋转一个角度，连起来是旋转弹幕
-     *   telegraph 发射前先亮一条细预警线（狙击体）
-     */
     shoot(G, e, nx, ny) {
       const P = e.proto;
       const spd = P.bulletSpeed || 200;
@@ -1035,8 +947,7 @@
       };
 
       if (e.isBoss) {
-        // 领主：环形弹幕
-        const n = 12;
+        const n = 8;
         for (let i = 0; i < n; i++) {
           push(base + (i / n) * TAU, 0.6, 7);
         }
@@ -1044,7 +955,6 @@
         return;
       }
 
-      // 狙击体：先亮预警线，再打出一发高速弹
       if (P.telegraph) {
         const len = 900;
         FX.bolt(e.x, e.y, e.x + Math.cos(base) * len, e.y + Math.sin(base) * len,
@@ -1054,19 +964,16 @@
         return;
       }
 
-      const n = P.volley || 1;
+      const n = Math.max(1, Math.round((P.volley || 1) * VOLLEY_MUL));
       if (P.ring) {
-        // 环形弹幕：一圈均分，留出可穿的缝
         for (let i = 0; i < n; i++) push(base + (i / n) * TAU, 0.7, 6);
         FX.ring(e.x, e.y, e.color, 6, e.r * 2.2, 0.3, 3);
       } else if (P.spiral) {
-        // 螺旋弹幕：每次整体旋转，连续射击形成旋转的弹墙
         e.spiralA = (e.spiralA || 0) + 0.42;
         for (let i = 0; i < n; i++) {
           push(e.spiralA + (i / n) * TAU, 0.7, 5);
         }
       } else if (n > 1 && P.spread) {
-        // 扇形散射
         const half = P.spread / 2;
         for (let i = 0; i < n; i++) {
           const t = n === 1 ? 0.5 : i / (n - 1);
@@ -1085,7 +992,6 @@
       for (let i = B.length - 1; i >= 0; i--) {
         const b = B[i];
         b.life -= dt;
-        // 领主的追踪弹：缓慢转向咬住玩家，但转速有限，可以绕圈甩掉
         if (b.homing) {
           const want = U.angle(b.x, b.y, p.x, p.y);
           const cur = Math.atan2(b.vy, b.vx);
@@ -1108,25 +1014,16 @@
       }
     },
 
-    /** 对敌人造成伤害；返回是否击杀 */
     damage(G, e, amount, opts) {
       if (e.dead || e.hp <= 0) return false;
       opts = opts || {};
 
-      // 目标身上的减益（冻结 / 剧毒腐蚀 / 锁定易伤）对所有伤害生效
       amount *= global.Effects.stateMul(e);
-      // 攻击者携带的效果（破甲 / 击退对群 / 聚焦递增）
-      amount *= global.Effects.dmgMul(G, e, opts.effects);
-      // 力场 S：领域内敌人受到的所有伤害提高
-      if (e.ampT > 0) amount *= 1.25;
-      // 护甲减伤（破甲层降低有效护甲）
       if (e.armor > 0) {
         const eff = e.armor * (1 - (e.armorBreak || 0) * 0.16);
         amount *= 1 - Math.max(0, eff) / (Math.max(0, eff) + 46);
       }
-      if (e.bulwarkDr) amount *= (1 - e.bulwarkDr);
 
-      // 二阶段（无尽）：血量无限，改为累计伤害，按一阶段血量为 100% 记录百分比
       if (e.phase2) {
         e.dmgTaken += amount;
       } else {
@@ -1144,17 +1041,15 @@
       }
       if (opts.slow) e.slowT = Math.max(e.slowT, opts.slow);
 
-      // 伤害数字（限流）
       if (amount >= 1 && Math.random() < 0.4 && FX.texts.length < 34) {
         FX.text(e.x, e.y - e.r - 4, Math.round(amount), opts.crit ? '#ffd23c' : '#ffffff',
           { size: opts.crit ? 17 : 13, life: 0.6 });
       }
-      if (e.phase2) return false;      // 二阶段不会死亡，直到玩家倒下
+      if (e.phase2) return false;
       return e.hp <= 0;
     },
 
     kill(G, e, index) {
-      // 最终领主的一阶段：不真正死亡，冻结在原地，交由 game 走通关 / 继续挑战流程
       if (e.isFinal && !e.phase2 && !G.endless) {
         e.hp = 0;
         if (G.onFinalBossDown) G.onFinalBossDown(e);
@@ -1168,7 +1063,6 @@
       G.kills++;
       G.spawnGem(e.x, e.y, e.xp);
 
-      // 裂变体：死亡时炸出几只小虫，逼玩家处理尸体位置
       if (e.proto && e.proto.splitOnDeath && !e.noSplit) {
         const sub = e.proto.splitOnDeath;
         const n = e.proto.splitCount || 3;
@@ -1177,7 +1071,7 @@
           const a = (i / n) * TAU + U.rand(-0.3, 0.3);
           const d = e.r + 12;
           const c = this.make(sub, e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, G.time, G);
-          c.noSplit = true;          // 分裂产物不再分裂，避免无限套娃
+          c.noSplit = true;
           c.kx = Math.cos(a) * 90;
           c.ky = Math.sin(a) * 90;
           this.list.push(c);
@@ -1186,15 +1080,12 @@
         FX.burst(e.x, e.y, e.color, 12, { speed: 190, life: 0.4, size: 2.4 });
       }
 
-      // 生命晶体：大幅调低掉落率，只作为偶发的救急补给，
-      // 而非常规续航来源（续航交给被动「纳米修复」与宝箱祝福）
       const healChance = e.isBoss ? 1 : (e.elite ? 0.04 : 0.005);
       if (Math.random() < healChance) {
         G.spawnHeal(e.x, e.y, e.isBoss ? 60 : (e.elite ? 22 : 9));
       }
       Sfx.play('kill');
 
-      // 祝福「血族」等击杀触发效果
       if (G.onEnemyKilled) G.onEnemyKilled(e);
 
       FX.burst(e.x, e.y, e.color, e.isBoss ? 60 : 9, {
@@ -1209,7 +1100,6 @@
       }
     },
 
-    /* ---- 绘制 ---- */
     draw(ctx, G) {
       const L = this.list;
       for (let i = 0; i < L.length; i++) {
@@ -1219,11 +1109,6 @@
       this.drawBullets(ctx);
     },
 
-    /**
-     * 领主实时绘制（数量极少，不走精灵缓存）。
-     * 最终领主拥有独立的视觉：三重旋转外环、六向尖刺、脉动核心；
-     * 进入二阶段后整体转为紫色并浮现裂纹。
-     */
     drawOne(ctx, e) {
       const flash = e.hitFlash > 0;
 
@@ -1239,7 +1124,6 @@
       ctx.drawImage(sp, -sp.width / 2, -sp.height / 2);
       ctx.restore();
 
-      // 血条（仅受伤过的中型以上敌人）
       if (e.hp < e.maxHp && e.r >= 14) {
         const w = e.r * 2;
         const hp = e.hp / e.maxHp;
@@ -1256,7 +1140,6 @@
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < B.length; i++) {
         const b = B[i];
-        // 红色威胁外光（比玩家弹更醒目）
         ctx.fillStyle = b.frozen > 0 ? '#9b6bff' : b.color;
         ctx.shadowColor = ctx.fillStyle;
         ctx.shadowBlur = 18;
@@ -1264,11 +1147,9 @@
         ctx.arc(b.x, b.y, b.r * 1.5, 0, TAU);
         ctx.fill();
         ctx.shadowBlur = 0;
-        // 实体
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, TAU);
         ctx.fill();
-        // 白色高光芯
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = '#ffffff';
         ctx.shadowBlur = 10;
