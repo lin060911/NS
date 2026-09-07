@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>霓虹幸存者 · Neon Survivor</title>
+<title>弹雨漫游 · Bullet Rain Roam</title>
 <link rel="icon" type="image/png" sizes="32*32" href="img.png">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -19,7 +19,7 @@
       </div>
       <div class="stats">
         <div id="timer" class="timer">00:00</div>
-        <div class="mini">等级 <b id="lvNum">1</b> · 击杀 <b id="killNum">0</b></div>
+        <div class="mini"><span id="lvWrap">等级 <b id="lvNum">1</b></span><span id="rushWrap" class="hidden">领主 <b id="rushNum">1 / 10</b></span> · 击杀 <b id="killNum">0</b></div>
       </div>
     </div>
 
@@ -37,11 +37,12 @@
 
   <div id="screenMenu" class="screen">
     <div class="panel menu-panel">
-      <h1 class="title">霓虹幸存者</h1>
-      <div class="subtitle">N E O N &nbsp; S U R V I V O R</div>
+      <h1 class="title">弹雨漫游</h1>
+      <div class="subtitle">B U L L E T &nbsp; R A I N &nbsp; R O A M</div>
       <p class="desc">
-        在无尽的数据荒原中活下来。<br>
-        武器会自动开火 —— 你只需要<strong>走位</strong>、<strong>融合</strong>、<strong>变强</strong>。
+        在弹雨中活下来。<br>
+        <strong>开启新篇</strong>　从零成长，通关后可把构筑存进存档。<br>
+        <strong>领主挑战</strong>　携带存档的构筑，连续迎战 10 位领主。
       </p>
 
       <div class="keys">
@@ -55,7 +56,9 @@
 
       <div id="bestBox" class="best-box">最佳记录：--</div>
 
-      <button id="btnStart" class="btn primary">开 始 游 戏</button>
+      <button id="btnNewGame" class="btn primary">开 启 新 篇</button>
+      <button id="btnBossRush" class="btn rush">领 主 挑 战</button>
+      <button id="btnSaves" class="btn ghost">存 档 管 理</button>
       <button id="btnHow" class="btn ghost">玩 法 说 明</button>
     </div>
   </div>
@@ -71,12 +74,13 @@
         <li><b>单体与范围</b>　雪花弹、毒气弹命中即消失。想让冰霜 / 剧毒变成范围，要合成<b>爆破形态</b>的霜系 / 毒系弹珠。</li>
         <li><b>合成</b>　同阶任意两颗都能合成，顺序不影响产物：B + B → A（28 种），A + A → S（23 种）。产物等级 = 两颗之和。</li>
         <li><b>等级</b>　B 1~3 · A 2~6 · S 4~12。特效在所有等级都生效。</li>
-        <li><b>技能</b>　每合成一件 S 阶弹珠解锁对应技能，最多带 3 个（暂停菜单「技能」页装配）。</li>
+        <li><b>技能</b>　金属风暴、饱和轰炸、湮灭光束、自动防御卫星、严冬、腐朽、天罚、混沌产物 这 8 件 S 阶各有专属技能，最多带 3 个（暂停菜单「技能」页装配）。</li>
         <li><b>预警</b>　精英与领主出手前，地面亮起图形并逐渐填满 —— <b class="danger">红色</b>重伤，<b class="danger">紫色</b>秒杀，看到就躲。</li>
         <li><b>回血</b>　绿色十字晶体，掉落率低，残血时吸附范围更大；续航主要靠被动「纳米修复」。</li>
         <li><b>敌人</b>　虫群、执行体、追猎者之外，还有打弹幕的散射体、旋涡、弹幕塔、狙击体，以及死亡分裂的裂变体和高护甲的壁垒。</li>
-        <li><b>领主</b>　随血量切换阶段，招式越来越密。击破掉落宝箱：智库（等级 +3）/ 肉身（伤害 +10%、生命 +30）/ 祝福（随机特殊效果）。</li>
-        <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，之后可进入无尽模式。</li>
+        <li><b>领主</b>　随血量切换阶段，招式越来越密。击破掉落宝箱：智库（所有弹珠 +1 级）/ 肉身（伤害 +10%）/ 祝福（随机特殊效果）。</li>
+        <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，可保存存档或进入无尽模式。</li>
+        <li><b>领主挑战</b>　选一个存档进挑战：不掉落经验、无法升级，领主被击败只掉血包；连战 10 位领主，第 10 位不死不灭，以对它造成的伤害百分比计成绩。</li>
       </ul>
       <button id="btnHowBack" class="btn primary">返 回</button>
     </div>
@@ -182,11 +186,11 @@
           <li><b>合成</b>　每 5 级 1 次机会。同阶任意两颗都能合成，顺序不影响产物，产物等级 = 两颗之和。</li>
           <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态 + 3 种自带特效，两两组合 = 28 种 A 阶。</li>
           <li><b>终极</b>　28 种 A 阶两两组合 = 406 条，产出 23 种 S 阶，配方见「融合图鉴」。</li>
-          <li><b>技能</b>　每件 S 阶弹珠解锁一个专属技能，最多带 3 个（SPACE / Q / E）。</li>
+          <li><b>技能</b>　8 件 S 阶弹珠各有专属大招（金属风暴 / 饱和轰炸 / 湮灭光束 / 自动防御卫星 / 严冬 / 腐朽 / 天罚 / 混沌产物），最多带 3 个。</li>
           <li><b>预警</b>　地面图形填满即爆发。<b class="danger">红色</b>造成重伤，<b class="danger">紫色</b>是秒杀技 —— 必须躲开。</li>
           <li><b>回血</b>　绿色十字，掉落率低，残血时吸附范围更大；续航靠被动「纳米修复」。</li>
-          <li><b>宝库</b>　智库（等级 +3，再选 3 次）/ 肉身（伤害 +10%、生命 +30）/ 祝福（随机特殊效果）。</li>
-          <li><b>祝福</b>　血族（击败敌人几率回血）/ 不灭（免疫一次致命伤，挡不住秒杀）/ 咆哮（R 键清场，冷却 120 秒），每种一次。</li>
+          <li><b>宝库</b>　智库（所有弹珠 +1 级）/ 肉身（伤害 +10%）/ 祝福（随机特殊效果）。</li>
+          <li><b>祝福</b>　猎人（对领主 +20% 伤害，对杂兵 -15%）/ 不灭（免疫一次致命伤，挡不住秒杀）/ 咆哮（R 键清场，冷却 120 秒），每种一次。</li>
           <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，可继续挑战无尽模式。</li>
         </ul>
       </div>
@@ -208,8 +212,32 @@
         最终领主已被击溃。可以保存成绩离开，也可以<strong class="danger">继续挑战</strong> ——
         它会以更强的姿态归来，而且<strong class="danger">不会再倒下</strong>。
       </p>
-      <button id="btnWinSave" class="btn primary">保 存 成 绩 并 退 出</button>
+      <button id="btnWinSave" class="btn primary">保 存 存 档</button>
       <button id="btnWinEndless" class="btn ghost danger">继 续 挑 战 · 无 尽 模 式</button>
+      <button id="btnWinMenu" class="btn ghost">返 回 主 菜 单</button>
+    </div>
+  </div>
+
+  <div id="screenSaves" class="screen hidden loadout-screen">
+    <div class="panel loadout-panel">
+      <h2 class="ph" id="savesTitle">领 主 挑 战</h2>
+      <div class="saves-top">
+        <div id="savesTip" class="saves-tip">选择一个存档，携带它的构筑进入挑战</div>
+        <button id="btnSavesManage" class="btn ghost small">编 辑</button>
+      </div>
+      <div id="savesBox" class="saves-box"></div>
+      <button id="btnSavesBack" class="btn primary">返 回</button>
+    </div>
+  </div>
+
+  <div id="screenSaveName" class="screen hidden">
+    <div class="panel">
+      <h2 class="ph">保 存 存 档</h2>
+      <p class="win-tip">为本次通关的构筑命名，最多保留 <b>10</b> 个存档（超出会挤掉最早的）。</p>
+      <input id="saveNameInput" class="name-input" type="text" maxlength="16" placeholder="未命名存档">
+      <div id="saveNameErr" class="save-err hidden"></div>
+      <button id="btnSaveNameOk" class="btn primary">确 认 保 存</button>
+      <button id="btnSaveNameSkip" class="btn ghost">暂 不 保 存</button>
     </div>
   </div>
 
@@ -239,6 +267,7 @@
 <script src="js/abilities.js"></script>
 <script src="js/upgrades.js"></script>
 <script src="js/player.js"></script>
+<script src="js/saves.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

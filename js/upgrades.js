@@ -61,7 +61,7 @@
       id: 'plating', name: '装甲板', icon: '▣', color: '#ff7a3d', maxLevel: 5,
       brief: '提高生命上限，并立即回复等量生命',
       desc: function (lv) {
-        const f = (k) => '生命上限 <b>+' + k * 30 + '</b>';
+        const f = (k) => '生命上限 <b>+' + k * 15 + '</b>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -69,7 +69,7 @@
       id: 'nano', name: '纳米修复', icon: '✚', color: '#9dff3c', maxLevel: 5,
       brief: '按最大生命的百分比持续回复生命',
       desc: function (lv) {
-        const f = (k) => '每秒回复 <b>' + (k * 0.6).toFixed(1) + '%</b> 最大生命';
+        const f = (k) => '每秒回复 <b>' + (k * 0.3).toFixed(1) + '%</b> 最大生命';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -254,7 +254,7 @@
       level: 1,
       dup: !!own,
       tag: own ? 'B 阶 · 已有 Lv' + own.level + ' · 再获一枚' : 'B 阶 · 新弹珠',
-      tagCls: 't-new',
+      tagCls: 't-b',
       brief: def.brief,
       effect: effectLine(def),
       cur: own ? 'Lv' + own.level + '　' + def.desc(own.level).cur : '',
@@ -273,7 +273,7 @@
       level: lv + 1,
       tag: def.tierName + ' 阶 · Lv' + lv + ' → Lv' + (lv + 1) +
         (ord ? ' · 第 ' + ord + ' 枚' : ''),
-      tagCls: 't-up',
+      tagCls: def.tier === 1 ? 't-b' : (def.tier === 2 ? 't-a' : 't-s'),
       brief: def.brief,
       effect: effectLine(def),
       cur: 'Lv' + lv + '　' + def.desc(lv).cur,

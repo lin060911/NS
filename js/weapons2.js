@@ -153,7 +153,7 @@
     const clearR = 42 * (1 + am * 0.9);
     w._satN = n;
     w._satR = orbit;
-    w._satA = (w._satA || 0) + 1.15 * dt;
+    w._satA = (w._satA || 0) + 2.2 * dt;
     w._satTick = (w._satTick || 0) - dt;
     const hit = w._satTick <= 0;
     if (hit) w._satTick = 0.32;
@@ -177,7 +177,7 @@
           const rr = hitR + e.r;
           if (dx * dx + dy * dy > rr * rr) continue;
           const crit = G.rollCrit();
-          const final = s.dmg * 0.3 * (crit > 1 ? crit : 1);
+          const final = s.dmg * 0.05 * (crit > 1 ? crit : 1);
           Enemies.damage(G, e, final, { angle: a, knock: 20, crit: crit > 1, effects: def.effects });
           global.Effects.onHit(G, e, def.effects, final);
         }
@@ -190,7 +190,7 @@
           type: 'seeker', x: p.x, y: p.y,
           vx: Math.cos(a) * 320, vy: Math.sin(a) * 320,
           speed: 660, turn: 6.4, target: null,
-          r: 9, dmg: s.dmg * g / n * 1.8, pierce: 0, hits: [],
+          r: 9, dmg: s.dmg * g / n * 2.8, pierce: 0, hits: [],
           effects: def.effects, color: def.color,
           shape: 'missile', trail: '#ffc93c',
           spec: def.spec, blastR: 92,
@@ -238,7 +238,7 @@
     const p = P();
     w._jT = (w._jT || 0) - dt;
     if (w._jT > 0) return;
-    w._jT = 1;
+    w._jT = Math.max(0.26, 0.7 - (s.groups - 1) * 0.07);
     for (let i = 0; i < g; i++) {
       const lo = i / g * TAU, hi = (i + 1) / g * TAU;
       let best = null, bd = Infinity;
@@ -255,19 +255,21 @@
       if (!best) best = Enemies.nearest(p.x, p.y, 900);
       if (!best) continue;
       const x = best.x, y = best.y;
-      const strikeR = 96 * (1 + (p.areaMul || 0) * 0.7);
-      FXC.bolt(x - 26, y - 900, x, y, def.color, 0.26, 46);
-      FXC.bolt(x + 22, y - 900, x, y, '#ffffff', 0.2, 34);
-      FXC.ring(x, y, def.color, 8, strikeR, 0.42, 5);
-      FXC.ring(x, y, '#ffffff', 4, strikeR * 0.5, 0.26, 3);
-      FXC.burst(x, y, def.color, 20, { speed: 190, life: 0.5, size: 3 });
-      FXC.addShake(2);
+      const strikeR = (132 + 16 * (s.groups - 1)) * (1 + (p.areaMul || 0) * 0.7);
+      FXC.bolt(x - 30, y - 1100, x, y, def.color, 0.3, 52);
+      FXC.bolt(x + 26, y - 1100, x, y, '#ffffff', 0.24, 38);
+      FXC.bolt(x, y - 1100, x, y, '#fff6b0', 0.18, 22);
+      FXC.ring(x, y, def.color, 10, strikeR, 0.46, 6);
+      FXC.ring(x, y, '#ffffff', 4, strikeR * 0.55, 0.28, 3);
+      FXC.burst(x, y, def.color, 26, { speed: 230, life: 0.55, size: 3.4 });
+      FXC.addFlash(0.12);
+      FXC.addShake(2.4);
       const crit = G.rollCrit();
-      const direct = s.dmg * 1.1 * (crit > 1 ? crit : 1);
+      const direct = s.dmg * 2.4 * (crit > 1 ? crit : 1);
       Enemies.damage(G, best, direct, { angle: 0, knock: 40, crit: crit > 1, effects: def.effects });
       global.Effects.onHit(G, best, def.effects, direct);
-      Weapons.explode(G, x, y, strikeR, s.dmg * 0.75, def.color, 40, def.effects, null);
-      Weapons.chainFrom(G, best, s.dmg * 0.45, 5, 240, def.effects, def.color, { para: 0.9 });
+      Weapons.explode(G, x, y, strikeR, s.dmg * 1.5, def.color, 40, def.effects, null);
+      Weapons.chainFrom(G, best, s.dmg * 0.85, 5, 280, def.effects, def.color, { para: 0.9 });
       global.Sfx.play('explode');
     }
   }
@@ -284,7 +286,7 @@
       const life = 2.2;
       Weapons.addCloud({
         x: x, y: y, r: r, life: life,
-        dps: s.dmg * g / life * 1.6, effects: def.effects,
+        dps: s.dmg * 0.42 * g, effects: def.effects,
         pull: 1, color: def.color, bossPull: 0
       });
       FXC.ring(x, y, def.color, 8, r, 0.5, 5);
@@ -403,7 +405,7 @@
       spec: { speed: 430, freeze: 1.5, vuln: [0.35, 0.15], hitFx: true } },
     { id: 'a21', name: '剧毒追踪弹', form: 'seek', cd: 1.0, dps: 239, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '追踪命中持续快速扣血',
       spec: { speed: 430, dot: 1.1, dotT: 3 } },
-    { id: 'a22', name: '十万伏特', form: 'chain', cd: 1.0, dps: 260, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电流缓慢传导，麻痹沿途敌人',
+    { id: 'a22', name: '十万伏特', form: 'chain', cd: 1.0, dps: 700, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电流缓慢传导，麻痹沿途敌人',
       spec: {}, update: voltUpdate },
     { id: 'a23', name: '冰霜领域', form: 'crystal', cd: 1.0, dps: 300, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '身边减速圈，叠满冻结并易伤',
       spec: {}, aura: function (G, w, dt, def) {
@@ -460,7 +462,7 @@
         fieldAura(G, w, dt, def, { r: 168, rGrow: 0.10, cycle: 99, vuln: 0, vulnGrow: 0, bossVuln: 0, slow: 0, dot: 1.5, dmgK: 0.7 });
       }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#9dff3c'); } },
     { id: 's07', name: '天罚', form: 'chain', cd: 0.95, dps: 2000, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '每秒落雷，传导麻痹并造成巨量伤害',
-      spec: {}, update: judgeUpdate },
+      spec: {}, update: judgeUpdate, drawFx: null },
     { id: 's08', name: '极寒病毒＋', form: 'crystal', cd: 0.95, dps: 2100, effects: ['frost', 'venom'], icon: '❄', color: '#7ad7ff', brief: '强化极寒病毒，易伤与剧毒更高',
       spec: { r: 15, vuln: [0.42, 0.22], dot: 1.25, dotT: 3, hitFx: true, big: true, trail: '#7ad7ff' } },
     { id: 's09', name: '超导电流＋', form: 'chain', cd: 0.95, dps: 2100, effects: ['frost', 'shock'], icon: '❄', color: '#9be8ff', brief: '强化超导电流，传导更远易伤更高',

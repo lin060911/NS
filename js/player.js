@@ -18,7 +18,7 @@
     p.areaMul = 0;
     p.amount = 0;
     p.speed = 165;
-    p.maxHpBase = 100 + (p.maxHpBonus || 0) + (p.level - 1) * 3;
+    p.maxHpBase = 100 + (p.maxHpBonus || 0) + Math.floor((p.level - 1) / 5) * 10;
     p.pickup = 115;
     p.regen = p.regenBonus || 0;
     p.armor = 0;
@@ -30,8 +30,8 @@
     if (ps.expand) p.areaMul += Math.pow(1.18, ps.expand) - 1;
     if (ps.split) p.amount += ps.split;
     if (ps.thruster) p.speed *= Math.pow(1.10, ps.thruster);
-    if (ps.plating) p.maxHpBase += 30 * ps.plating;
-    if (ps.nano) p.regen += p.maxHpBase * 0.006 * ps.nano;
+    if (ps.plating) p.maxHpBase += 15 * ps.plating;
+    if (ps.nano) p.regen += p.maxHpBase * 0.003 * ps.nano;
     if (ps.crit) { p.critChance += 0.12 * ps.crit; p.critMul += 0.33 * ps.crit; }
     if (ps.magnet) p.pickup *= Math.pow(1.25, ps.magnet);
 
@@ -135,44 +135,38 @@
       ctx.restore();
     }
 
+    ctx.rotate(p.facing + Math.PI / 2);
+
+    const col = p.hurtFlash > 0 ? '#ff4d6d' : '#38f0ff';
+    const R = p.r * 1.24;
+
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = p.hurtFlash > 0 ? '#ff4d6d' : '#38f0ff';
-    ctx.lineWidth = 2;
-    ctx.shadowColor = ctx.strokeStyle;
-    ctx.shadowBlur = 12;
-    const rot = G.time * 1.6;
-    for (let i = 0; i < 2; i++) {
-      ctx.beginPath();
-      ctx.arc(0, 0, p.r + 8, rot + i * Math.PI, rot + i * Math.PI + 1.5);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    ctx.rotate(p.facing + Math.PI / 2);
-    const col = p.hurtFlash > 0 ? '#ff4d6d' : '#38f0ff';
     ctx.shadowColor = col;
-    ctx.shadowBlur = 18;
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 2.4;
-    ctx.fillStyle = 'rgba(8,16,34,.9)';
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = 'rgba(8,20,40,.92)';
     ctx.beginPath();
-    ctx.moveTo(0, -p.r * 1.18);
-    ctx.lineTo(p.r * 0.86, p.r * 0.5);
-    ctx.lineTo(0, p.r * 0.72);
-    ctx.lineTo(-p.r * 0.86, p.r * 0.5);
+    ctx.moveTo(0, -R);
+    ctx.lineTo(R * 0.78, R * 0.42);
+    ctx.lineTo(0, R * 0.08);
+    ctx.lineTo(-R * 0.78, R * 0.42);
     ctx.closePath();
     ctx.fill();
-    ctx.stroke();
+    ctx.restore();
 
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 14;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = col;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.arc(0, -1, 3.6 + Math.sin(G.time * 8) * 0.7, 0, TAU);
-    ctx.fill();
+    ctx.moveTo(0, -R);
+    ctx.lineTo(R * 0.78, R * 0.42);
+    ctx.lineTo(0, R * 0.08);
+    ctx.lineTo(-R * 0.78, R * 0.42);
+    ctx.closePath();
+    ctx.stroke();
     ctx.restore();
 
     ctx.restore();

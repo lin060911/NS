@@ -169,17 +169,26 @@
     return cv;
   }
 
+  function hexA(hex, a) {
+    const h = String(hex).replace('#', '');
+    const n = h.length === 3
+      ? [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)]
+      : [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    return 'rgba(' + n[0] + ',' + n[1] + ',' + n[2] + ',' + a + ')';
+  }
+
   function drawBoss(ctx, e, flash) {
     if (e.isFinal) return drawFinalBoss(ctx, e, flash);
 
     const col = flash ? '#ffffff' : e.color;
+    const sides = e.sides || 6;
     ctx.save();
     ctx.translate(e.x, e.y);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(0, 0, e.r * 0.3, 0, 0, e.r * 2.2);
-    g.addColorStop(0, 'rgba(255,62,200,.42)');
-    g.addColorStop(1, 'rgba(255,62,200,0)');
+    g.addColorStop(0, hexA(e.color, 0.42));
+    g.addColorStop(1, hexA(e.color, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(0, 0, e.r * 2.2, 0, TAU);
@@ -193,10 +202,10 @@
     ctx.lineWidth = 4;
     ctx.fillStyle = flash ? 'rgba(255,255,255,.85)' : 'rgba(10,14,30,.72)';
     const r = e.r;
-    U.poly(ctx, 0, 0, r, 6, e.wob); ctx.fill(); ctx.stroke();
-    U.poly(ctx, 0, 0, r * 0.62, 6, -e.wob * 1.6); ctx.stroke();
+    U.poly(ctx, 0, 0, r, sides, e.wob); ctx.fill(); ctx.stroke();
+    U.poly(ctx, 0, 0, r * 0.62, sides, -e.wob * 1.6); ctx.stroke();
     U.poly(ctx, 0, 0, r * 1.32, 3, e.wob * 0.8);
-    ctx.strokeStyle = 'rgba(255,62,200,.55)';
+    ctx.strokeStyle = hexA(e.color, 0.55);
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
@@ -459,15 +468,29 @@
       }
     },
 
-    spawnBoss(G, index) {
+    spawnBoss(G, index, kindId, hpBoost) {
       const p = G.player;
       const a = Math.random() * TAU;
       const d = Math.max(G.w, G.h) * 0.6 + 120;
       const e = this.make('boss', p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, Math.min(G.time, BAL.BOSS_TIME_CAP), G);
+      const K = this.kindOf(index, kindId);
       e.bossIndex = index;
-      const boost = BAL.BOSS_HP_MUL[index] || 1;
+      e.kind = K.id;
+      e.bossName = K.name;
+      e.color = K.color;
+      e.sides = K.sides;
+      e.spinMul = K.spin;
+      let base = BAL.BOSS_HP_MUL[index];
+      if (base === undefined) {
+        const n = BAL.BOSS_HP_MUL.length;
+        base = (BAL.BOSS_HP_MUL[n - 1] || 1) * (1 + (index - n + 1) * 0.3);
+      }
+      const boost = (hpBoost === undefined ? base : hpBoost) * K.hpMul;
       e.maxHp = Math.round(e.maxHp * boost);
       e.hp = e.maxHp;
+      e.speed *= K.spMul;
+      e.dmg *= K.dmgMul;
+      e.r = Math.round(e.r * K.rMul);
       e.xp = Math.round(e.xp * (1 + index * 0.5));
       this.list.push(e);
       G.boss = e;
@@ -475,8 +498,8 @@
       G.bosses.push(e);
       Sfx.play('boss');
       FX.addShake(14);
-      FX.ring(e.x, e.y, '#ff3ec8', 20, 190, 0.9, 5);
-      G.toast('◆ 领 主 降 临 ◆');
+      FX.ring(e.x, e.y, K.color, 20, 190, 0.9, 5);
+      G.toast('◆ ' + K.name + ' 降 临 ◆');
       return e;
     },
 
@@ -487,6 +510,11 @@
       const e = this.make('boss', p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, Math.min(G.time, BAL.BOSS_TIME_CAP), G);
       e.isFinal = true;
       e.bossIndex = 5;
+      e.kind = 'chaos';
+      e.bossName = '混沌之心';
+      e.color = '#ff3ec8';
+      e.sides = 6;
+      e.spinMul = 1.0;
       e.maxHp = Math.round(e.maxHp * BAL.FINAL_HP_MUL);
       e.hp = e.maxHp;
       e.r = Math.round(e.r * 1.3);
@@ -640,8 +668,16 @@
         }
 
         if (dist > Math.max(G.w, G.h) * 1.6 + 900) {
-          e.hp = 0; e.dead = true;
-          L.splice(i, 1);
+          if (e.isBoss) {
+            const a = Math.random() * TAU;
+            const d = Math.max(G.w, G.h) * 0.45;
+            e.x = G.player.x + Math.cos(a) * d;
+            e.y = G.player.y + Math.sin(a) * d;
+            e.kx = 0; e.ky = 0;
+          } else {
+            e.hp = 0; e.dead = true;
+            L.splice(i, 1);
+          }
         }
       }
 
@@ -815,6 +851,146 @@
         }
       },
       {
+        id: 'bladeDance', name: '刃 舞', minPhase: 1,
+        cast(G, e, T, done) {
+          e.skillCd = 4.4;
+          let step = 0;
+          const total = 3;
+          const stepFn = () => {
+            if (step >= total) { done(); return; }
+            step++;
+            const ang = U.angle(e.x, e.y, G.player.x, G.player.y);
+            T.add({
+              shape: 'line', follow: e, lockAngle: true, angle: ang,
+              len: 470, width: 76, warn: 0.5, color: '#ff4d6d',
+              dmg: e.dmg * 0.8,
+              onFire: (GG, c) => {
+                T.damageInLine(GG, c);
+                e.kx = Math.cos(ang) * 420;
+                e.ky = Math.sin(ang) * 420;
+                FX.addShake(6);
+                stepFn();
+              }
+            });
+          };
+          stepFn();
+        }
+      },
+      {
+        id: 'artillery', name: '炮 击 覆 盖', minPhase: 1,
+        cast(G, e, T, done) {
+          e.skillCd = 4.6;
+          let fired = 0;
+          const n = 6;
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * TAU + Math.random() * 0.5;
+            const d = Math.random() * 240;
+            T.add({
+              shape: 'circle',
+              x: G.player.x + Math.cos(a) * d, y: G.player.y + Math.sin(a) * d,
+              radius: 118, warn: 1.0 + i * 0.14, color: '#ff8a3d',
+              dmg: e.dmg * 1.05,
+              onFire: (GG, c) => {
+                T.damageInCircle(GG, c);
+                FX.addShake(5);
+                if (++fired >= n) done();
+              }
+            });
+          }
+        }
+      },
+      {
+        id: 'mitosis', name: '分 裂 增 生', minPhase: 1,
+        cast(G, e, T, done) {
+          e.skillCd = 5.2;
+          FX.ring(e.x, e.y, e.color, 10, 170, 0.5, 4);
+          for (let i = 0; i < 3; i++) {
+            const a = (i / 3) * TAU + Math.random() * 0.4;
+            const c = Enemies.make('splitter', e.x + Math.cos(a) * 74, e.y + Math.sin(a) * 74, G.time, G);
+            if (c) { c.noSplit = true; Enemies.list.push(c); }
+          }
+          FX.burst(e.x, e.y, e.color, 24, { speed: 210, life: 0.6, size: 3 });
+          Sfx.play('boss');
+          done();
+        }
+      },
+      {
+        id: 'swarmCall', name: '虫 群 涌 动', minPhase: 1,
+        cast(G, e, T, done) {
+          e.skillCd = 5.6;
+          T.add({
+            shape: 'circle', follow: e, radius: 220, warn: 1.2, color: '#b14dff',
+            dmg: 0, silent: true,
+            onFire: (GG, c) => {
+              done();
+              for (let i = 0; i < 14; i++) {
+                const a = (i / 14) * TAU;
+                const d = 130 + Math.random() * 90;
+                Enemies.list.push(Enemies.make('swarm',
+                  c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, GG.time, GG));
+              }
+              FX.ring(c.x, c.y, '#b14dff', 12, 240, 0.55, 5);
+              Sfx.play('boss');
+            }
+          });
+        }
+      },
+      {
+        id: 'prismBeam', name: '棱 镜 折 射', minPhase: 1,
+        cast(G, e, T, done) {
+          e.skillCd = 5.0;
+          const base = Math.random() * TAU;
+          const n = 6;
+          let fired = 0;
+          for (let i = 0; i < n; i++) {
+            T.add({
+              shape: 'line', follow: e, lockAngle: true,
+              angle: base + (i / n) * TAU,
+              len: 780, width: 44, warn: 0.9 + i * 0.1, color: '#38f0ff',
+              dmg: e.dmg * 0.95,
+              onFire: (GG, c) => {
+                T.damageInLine(GG, c);
+                if (++fired >= n) done();
+              }
+            });
+          }
+          FX.addFlash(0.25);
+        }
+      },
+      {
+        id: 'chaosStorm', name: '混 沌 风 暴', minPhase: 2,
+        cast(G, e, T, done) {
+          e.skillCd = 6.4;
+          let fired = 0;
+          const n = 8;
+          for (let i = 0; i < n; i++) {
+            const a = Math.random() * TAU;
+            const d = Math.random() * 320;
+            T.add({
+              shape: 'circle',
+              x: G.player.x + Math.cos(a) * d, y: G.player.y + Math.sin(a) * d,
+              radius: 105, warn: 0.8 + i * 0.18, color: '#ff3ec8',
+              dmg: e.dmg * 0.9,
+              onFire: (GG, c) => {
+                T.damageInCircle(GG, c);
+                if (++fired >= n) done();
+              }
+            });
+          }
+          for (let k = 0; k < 3; k++) {
+            const ang = U.angle(e.x, e.y, G.player.x, G.player.y) + (k - 1) * 0.5;
+            T.add({
+              shape: 'line', follow: e, lockAngle: true, angle: ang,
+              len: 700, width: 56, warn: 1.4 + k * 0.2, color: '#b14dff',
+              dmg: e.dmg * 1.05,
+              onFire: (GG, c) => { T.damageInLine(GG, c); }
+            });
+          }
+          FX.addFlash(0.4);
+          FX.addShake(9);
+        }
+      },
+      {
         id: 'homing', name: '追踪弹', minPhase: 2,
         cast(G, e, T, done) {
           e.skillCd = 4.0;
@@ -839,13 +1015,51 @@
       }
     ],
 
+    BOSS_KINDS: [
+      { id: 'blade', name: '裁决之刃', color: '#ff4d6d', sides: 4, spin: 1.5,
+        hpMul: 0.85, spMul: 1.4, dmgMul: 1.15, rMul: 0.9,
+        moves: ['charge', 'wave', 'bladeDance', 'crossLaser'] },
+      { id: 'turret', name: '轰击要塞', color: '#ff8a3d', sides: 8, spin: 0.3,
+        hpMul: 1.2, spMul: 0.65, dmgMul: 1.0, rMul: 1.1,
+        moves: ['ringBarrage', 'artillery', 'homing', 'mineField'] },
+      { id: 'splitter', name: '裂变母体', color: '#9dff3c', sides: 5, spin: 0.8,
+        hpMul: 1.0, spMul: 1.0, dmgMul: 0.95, rMul: 1.0,
+        moves: ['wave', 'mitosis', 'ringBarrage', 'burst'] },
+      { id: 'summoner', name: '虫巢意志', color: '#b14dff', sides: 6, spin: 0.55,
+        hpMul: 1.1, spMul: 0.85, dmgMul: 0.9, rMul: 1.05,
+        moves: ['summon', 'swarmCall', 'homing', 'wave'] },
+      { id: 'laser', name: '棱镜核心', color: '#38f0ff', sides: 3, spin: 1.1,
+        hpMul: 0.95, spMul: 1.15, dmgMul: 1.2, rMul: 0.95,
+        moves: ['crossLaser', 'prismBeam', 'sweepLaser', 'gridLaser'] },
+      { id: 'chaos', name: '混沌之心', color: '#ff3ec8', sides: 6, spin: 1.0,
+        hpMul: 1.3, spMul: 1.05, dmgMul: 1.25, rMul: 1.15,
+        moves: ['wave', 'ringBarrage', 'charge', 'crossLaser', 'sweepLaser',
+          'mineField', 'burst', 'gridLaser', 'summon', 'homing', 'chaosStorm'] }
+    ],
+
+    kindOf(index, kindId) {
+      const n = this.BOSS_KINDS.length;
+      const i = ((kindId === undefined ? index : kindId) % n + n) % n;
+      return this.BOSS_KINDS[i];
+    },
+
+    kindDef(e) {
+      if (!e || !e.kind) return null;
+      return this.BOSS_KINDS.find((k) => k.id === e.kind) || null;
+    },
+
     bossAttack(G, e, T, dist) {
       if (e.phase2) return this.bossAttackP2(G, e, T);
 
       const hpR = e.hp / e.maxHp;
       const phase = hpR > 0.66 ? 1 : (hpR > 0.33 ? 2 : 3);
 
-      const pool = this.BOSS_MOVES.filter((m) => m.minPhase <= phase);
+      const kd = this.kindDef(e);
+      let pool = this.BOSS_MOVES.filter((m) => m.minPhase <= phase);
+      if (kd) {
+        const only = pool.filter((m) => kd.moves.indexOf(m.id) >= 0);
+        if (only.length) pool = only;
+      }
       if (!pool.length) return;
 
       let pick = U.pick(pool);
@@ -882,7 +1096,12 @@
         return;
       }
 
-      const pool = this.BOSS_MOVES.filter((m) => m.minPhase <= 4);
+      let pool = this.BOSS_MOVES.filter((m) => m.minPhase <= 4);
+      const kd2 = this.kindDef(e);
+      if (kd2) {
+        const only = pool.filter((m) => kd2.moves.indexOf(m.id) >= 0);
+        if (only.length) pool = only;
+      }
       let pick = U.pick(pool);
       if (pool.length > 1 && pick.id === e.lastMove) {
         pick = U.pick(pool.filter((m) => m.id !== e.lastMove));
@@ -1088,9 +1307,9 @@
         FX.burst(e.x, e.y, e.color, 12, { speed: 190, life: 0.4, size: 2.4 });
       }
 
-      const healChance = e.isBoss ? 1 : (e.elite ? 0.04 : 0.005);
+      const healChance = e.isBoss ? 1 : (e.elite ? 0.025 : 0.003);
       if (Math.random() < healChance) {
-        G.spawnHeal(e.x, e.y, e.isBoss ? 60 : (e.elite ? 22 : 9));
+        G.spawnHeal(e.x, e.y, e.isBoss ? 30 : (e.elite ? 11 : 4.5));
       }
       Sfx.play('kill');
 

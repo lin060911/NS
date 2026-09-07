@@ -12,6 +12,7 @@
   const Effects = global.Effects;
   const Fusions = global.Fusions;
   const Abilities = global.Abilities;
+  const Saves = global.Saves;
   const Telegraph = global.Telegraph;
   const TAU = Math.PI * 2;
 
@@ -43,12 +44,20 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const tierCls = (tier) => tier === 1 ? 't-b' : (tier === 2 ? 't-a' : 't-s');
+
+  const esc = (t) => String(t).replace(/[&<>"]/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
   const Game = {
     state: 'menu',
     time: 0,
     kills: 0,
     damageDone: 0,
     pendingLevelUps: 0,
+    mode: 'story',
+    noXp: false,
+    bossRush: null,
     boss: null,
     bosses: [],
     bossQueue: 0,
@@ -103,12 +112,19 @@
     },
 
     bindUI() {
-      $('btnStart').onclick = () => { Sfx.init(); Sfx.play('ui'); this.start(); };
+      $('btnNewGame').onclick = () => { Sfx.init(); Sfx.play('ui'); this.start('story'); };
+      $('btnBossRush').onclick = () => { Sfx.init(); Sfx.play('ui'); this.openSaves('pick'); };
+      $('btnSavesBack').onclick = () => { Sfx.play('ui'); this.closeSaves(); };
+      $('btnSaves').onclick = () => { Sfx.init(); Sfx.play('ui'); this.openSaves('manage'); };
+      $('btnSavesManage').onclick = () => { Sfx.play('ui'); this.toggleSavesManage(); };
+      $('btnSaveNameOk').onclick = () => { Sfx.play('ui'); this.confirmSaveName(); };
+      $('btnSaveNameSkip').onclick = () => { Sfx.play('ui'); $('screenSaveName').classList.add('hidden'); this.gameOver(true); };
+      $('btnWinMenu').onclick = () => { Sfx.play('ui'); this.backToMenu(); };
       $('btnHow').onclick = () => { Sfx.play('ui'); $('screenMenu').classList.add('hidden'); $('screenHow').classList.remove('hidden'); };
       $('btnHowBack').onclick = () => { Sfx.play('ui'); $('screenHow').classList.add('hidden'); $('screenMenu').classList.remove('hidden'); };
       $('btnResume').onclick = () => { Sfx.play('ui'); this.resume(); };
       $('btnQuit').onclick = () => { Sfx.play('ui'); this.gameOver(false); };
-      $('btnAgain').onclick = () => { Sfx.play('ui'); this.start(); };
+      $('btnAgain').onclick = () => { Sfx.play('ui'); this.start(this.mode || 'story'); };
       $('btnMenu').onclick = () => {
         $('screenOver').classList.add('hidden');
         $('hud').classList.add('hidden');
@@ -116,7 +132,7 @@
         this.state = 'menu';
         this.showBest();
       };
-      $('btnWinSave').onclick = () => { Sfx.play('ui'); this.saveAndExit(); };
+      $('btnWinSave').onclick = () => { Sfx.play('ui'); this.openSaveName(); };
       $('btnWinEndless').onclick = () => { Sfx.play('ui'); this.startEndless(); };
       $('btnFuse').onclick = () => this.confirmFusion();
       $('btnFuseSkip').onclick = () => this.skipFusion();
@@ -126,7 +142,7 @@
       if (bl) bl.onclick = () => this.openLoadout();
       const bc = $('btnLoadoutClose');
       if (bc) bc.onclick = () => this.closeLoadout();
-      for (const id of ['tabStatus', 'tabKeys', 'tabRules', 'tabBuild', 'tabCodex']) {
+      for (const id of ['tabStatus', 'tabKeys', 'tabRules', 'tabBuild', 'tabSkills', 'tabCodex']) {
         const btn = $('btn-' + id);
         if (btn) btn.onclick = () => this.switchTab(id);
       }
@@ -134,12 +150,21 @@
 
     hideAllScreens() {
       ['screenMenu', 'screenHow', 'screenLevel', 'screenFusion', 'screenChest',
-      'screenPause', 'screenWin', 'screenOver', 'screenLoadout'].forEach((id) => {
+      'screenPause', 'screenWin', 'screenOver', 'screenLoadout',
+      'screenSaves', 'screenSaveName'].forEach((id) => {
         $(id).classList.add('hidden');
       });
     },
 
-    reset() {
+    reset(opts) {
+      this.mode = (opts && opts.mode) || 'story';
+      this.noXp = this.mode === 'bossRush';
+      this.bossRush = this.mode === 'bossRush'
+        ? {
+          index: 0, total: 10, kills: 0,
+          power: (opts && opts.power) || 40000, lastDps: 0
+        } : null;
+      this.skillStorms = [];
       this.time = 0;
       this.kills = 0;
       this.damageDone = 0;
@@ -179,16 +204,191 @@
       this.refreshChips();
     },
 
-    start() {
+    start(mode, saveRec) {
       Sfx.init();
       Sfx.resume();
-      this.reset();
+      this.reset({
+        mode: mode || 'story',
+        power: saveRec ? (saveRec.power || Saves.powerIndex(saveRec)) : 40000
+      });
+      if (saveRec) Saves.apply(saveRec, this.player);
+      this.refreshChips();
       this.state = 'playing';
       this.hideAllScreens();
       $('hud').classList.remove('hidden');
       $('bossWrap').classList.add('hidden');
       Input.reset();
-      this.toast('系 统 启 动');
+      this.buildSkillBar();
+      if (this.mode === 'bossRush') {
+        this.toast('领 主 挑 战');
+        this.spawnRushBoss();
+      } else {
+        this.toast('系 统 启 动');
+      }
+    },
+
+    spawnRushBoss() {
+      const r = this.bossRush;
+      if (!r) return;
+      const idx = r.index;
+      if (idx >= r.total) return;
+      const target = idx >= r.total - 1 ? 100 : 55 + idx * 5;
+      const dps = r.lastDps || 0;
+      const base = dps > 0 ? dps * target : Math.max(12000, (r.power || 40000) * 0.35 * target);
+      const kindId = idx >= r.total - 1 ? 5 : (idx % 5);
+      const e = Enemies.spawnBoss(this, idx, kindId, 1);
+      const kd = Enemies.kindDef(e) || { hpMul: 1 };
+      const want = Math.max(12000, Math.round(base * kd.hpMul));
+      e.maxHp = want;
+      e.hp = want;
+      e.dmgTaken = 0;
+      e.isRush = true;
+      e.rushT0 = this.time;
+      e._dealt = 0;
+      e._engage = 0;
+      e._lastHp = want;
+      e._tuneT = 0;
+      this.boss = e;
+      if (idx >= r.total - 1) {
+        e.rushFinal = true;
+        Enemies.enterPhase2(this, e);
+        this.toast('◆ 第 ' + r.total + ' 领 主 · 不 死 不 灭 ◆');
+      } else {
+        this.toast('◆ 第 ' + (idx + 1) + ' / ' + r.total + ' 领 主 ◆');
+      }
+    },
+
+    openSaves(purpose) {
+      this._savesPurpose = purpose || 'pick';
+      this.renderSaves();
+      $('screenMenu').classList.add('hidden');
+      $('screenSaves').classList.remove('hidden');
+      Sfx.play('ui');
+    },
+
+    toggleSavesManage() {
+      this._savesPurpose = this._savesPurpose === 'manage' ? 'pick' : 'manage';
+      this.renderSaves();
+      Sfx.play('ui');
+    },
+
+    renameSave(id) {
+      const rec = Saves.get(id);
+      if (!rec) return;
+      const v = global.prompt('重命名存档', rec.name);
+      if (v === null) return;
+      Saves.rename(id, v.trim() || rec.name);
+      this.renderSaves();
+      Sfx.play('ui');
+    },
+
+    deleteSave(id) {
+      const rec = Saves.get(id);
+      if (!rec) return;
+      if (!global.confirm('确定删除存档「' + rec.name + '」？')) return;
+      Saves.remove(id);
+      this.renderSaves();
+      Sfx.play('ui');
+    },
+
+    closeSaves() {
+      $('screenSaves').classList.add('hidden');
+      $('screenMenu').classList.remove('hidden');
+      Sfx.play('ui');
+    },
+
+    renderSaves() {
+      const box = $('savesBox');
+      const list = Saves.list();
+      const pick = this._savesPurpose !== 'manage';
+      $('savesTitle').textContent = pick ? '领 主 挑 战' : '存 档 管 理';
+      $('savesTip').textContent = pick
+        ? '选择一个存档，携带它的构筑进入挑战（不掉落经验，无法升级）'
+        : '最多保留 10 个存档，超出会挤掉最早的';
+      if (!list.length) {
+        box.innerHTML = '<div class="sv-empty">暂无存档 —— 先在「开启新篇」通关并保存</div>';
+        return;
+      }
+      let h = '';
+      for (const sv of list) {
+        h += '<div class="sv-item' + (pick ? ' pickable' : '') + '" data-id="' + sv.id + '">' +
+          '<div class="sv-head"><span class="sv-name">' + esc(sv.name) + '</span>' +
+          '<span class="sv-lv">Lv' + sv.level + '</span></div>' +
+          '<div class="sv-line">' + esc(Saves.weaponText(sv)) + '</div>' +
+          '<div class="sv-line dim">' + esc(Saves.passiveText(sv)) + '</div>' +
+          '<div class="sv-line dim">' + esc(Saves.blessText(sv)) + '</div>' +
+          '<div class="sv-line dim">存活 ' + Saves.timeText(sv) +
+          ' · ' + Saves.powerText(sv) + '</div>' +
+          (pick
+            ? '<div class="sv-go">进 入 挑 战</div>'
+            : '<div class="sv-act"><button data-act="rn">重命名</button>' +
+              '<button data-act="rm" class="del">删除</button></div>') +
+          '</div>';
+      }
+      box.innerHTML = h;
+      const items = box.querySelectorAll('.sv-item');
+      if (!items) return;
+      for (const it of items) {
+        const id = it.getAttribute('data-id');
+        if (pick) {
+          it.onclick = () => {
+            const rec = Saves.get(id);
+            if (!rec) return;
+            $('screenSaves').classList.add('hidden');
+            this.start('bossRush', rec);
+          };
+        } else {
+          const btns = it.querySelectorAll('button');
+          for (const b of (btns || [])) {
+            b.onclick = (ev) => {
+              if (ev && ev.stopPropagation) ev.stopPropagation();
+              const act = b.getAttribute('data-act');
+              if (act === 'rn') this.renameSave(id);
+              else if (act === 'rm') this.deleteSave(id);
+            };
+          }
+        }
+      }
+    },
+
+    openSaveName() {
+      const inp = $('saveNameInput');
+      if (inp) inp.value = '通关 Lv' + this.player.level;
+      const err = $('saveNameErr');
+      if (err) {
+        const n = Saves.list().length;
+        if (n >= Saves.MAX) {
+          const oldest = Saves.list()[0];
+          err.textContent = '存档已满 ' + Saves.MAX + ' 个 —— 保存后将挤掉最早的「' +
+            (oldest ? oldest.name : '') + '」';
+          err.classList.remove('hidden');
+        } else {
+          err.textContent = '';
+          err.classList.add('hidden');
+        }
+      }
+      $('screenSaveName').classList.remove('hidden');
+      Sfx.play('ui');
+    },
+
+    confirmSaveName() {
+      const inp = $('saveNameInput');
+      const name = ((inp && inp.value) || '').trim() || '未命名存档';
+      Saves.add(Saves.capture(this.player, {
+        name: name, kills: this.kills, time: this.time, bossKills: 5
+      }));
+      $('screenSaveName').classList.add('hidden');
+      this.toast('存 档 已 保 存');
+      this.gameOver(true);
+    },
+
+    backToMenu() {
+      this.state = 'menu';
+      this.hideAllScreens();
+      $('hud').classList.add('hidden');
+      $('screenMenu').classList.remove('hidden');
+      this.showBest();
+      Sfx.play('ui');
     },
 
     switchTab(name) {
@@ -222,7 +422,8 @@
             : '纯形态';
           html += '<div class="build-row"><span style="color:' + d.color + '">' + d.icon + '</span>' +
             '<b>' + d.name + '</b>' +
-            '<span class="bdim">' + d.tierName + ' 阶 · Lv' + w.level + '/' + d.maxLevel +
+            '<span class="bdim"><span class="tier-txt ' + tierCls(d.tier) + '">' +
+            d.tierName + ' 阶</span> · Lv' + w.level + '/' + d.maxLevel +
             ' · ' + elTxt + '</span></div>';
         }
       }
@@ -315,7 +516,11 @@
       const d = Weapons.defs[id];
       const rows = [];
       rows.push(['品阶', d.tierName + ' 阶 · 满级 Lv' + d.maxLevel]);
-      rows.push(['设计输出', '<b>' + Math.round(d.baseDps) + '</b> DPS · 间隔 ' + d.baseCd.toFixed(2) + ' 秒']);
+      const ml = d.maxLevel;
+      const dpsMax = Math.round(d.baseDps * ml);
+      const perHit = Math.round(d.baseDps * ml * d.baseCd / (d.baseCount || 1));
+      rows.push(['满级输出', '<b>' + dpsMax + '</b> DPS · 单发 <b>' + perHit +
+        '</b> · 间隔 ' + d.baseCd.toFixed(2) + ' 秒']);
       const eff = d.effectIds.map((x) => Effects.name(x)).filter(Boolean);
       rows.push(['属性', eff.length ? eff.join(' ＋ ') : '无属性']);
       const spec = this.specLines(d.spec);
@@ -453,7 +658,7 @@
 
       ch += '<div class="build-sec"><div class="build-h">可用技能</div>';
         if (!unlocked.length) {
-        ch += '<div class="build-row bdim">尚未解锁 —— 合成 S 阶弹珠即可解锁</div>';
+        ch += '<div class="build-row bdim">尚未解锁 —— 合成拥有专属大招的 S 阶弹珠即可解锁</div>';
       } else {
         for (const id of unlocked) {
           const d = Abilities.defs[id];
@@ -485,8 +690,9 @@
         ch += '</div>';
       }
 
-      ch += '<div class="build-note">每件 S 阶弹珠解锁一个专属技能，最多带 <b>' +
-        Abilities.MAX_SLOTS + '</b> 个，同种只能带一个。</div>';
+      ch += '<div class="build-note">金属风暴、饱和轰炸、湮灭光束、自动防御卫星、严冬、腐朽、天罚、混沌产物 ' +
+        '这 <b>8</b> 件 S 阶各有专属大招，冷却 60~90 秒，最多带 <b>' +
+        Abilities.MAX_SLOTS + '</b> 个。</div>';
 
       const box = $('tabSkills');
       box.innerHTML = ch;
@@ -559,10 +765,16 @@
 
       Enemies.update(this, dt);
 
-      for (const w of p.weapons) Weapons.fire(this, w, dt);
+      for (const w of p.weapons) {
+        const wd = Weapons.defs[w.id];
+        if (wd && wd.update) wd.update(this, w, dt);
+        else Weapons.fire(this, w, dt);
+      }
       Weapons.update(this, dt);
 
       Abilities.update(this, dt);
+      if (this.mode === 'bossRush') this.rushTune(dt);
+      this.updateSkillStorms(dt);
       Telegraph.update(this, dt);
 
       if (this.roarCd > 0) this.roarCd = Math.max(0, this.roarCd - dt);
@@ -588,14 +800,83 @@
         if (this.toastT <= 0) $('toast').classList.remove('show');
       }
 
-      if (!this.endless && this.time >= WIN_TIME && !this.finalSpawned) {
+      if (this.mode === 'story' && !this.endless && this.time >= WIN_TIME && !this.finalSpawned) {
         this.finalSpawned = true;
         Enemies.spawnFinalBoss(this);
       }
     },
 
+    rushTune(dt) {
+      const r = this.bossRush;
+      if (!r) return;
+      const b = this.boss;
+      if (!b || !b.isRush || b.rushFinal || b.dead) return;
+
+      b._tuneT = (b._tuneT || 0) - (dt || 0);
+      if (b._tuneT > 0) return;
+      b._tuneT = 0.25;
+
+      if (b._lastHp === undefined) { b._lastHp = b.hp; b._dealt = 0; b._engage = 0; }
+      const drop = Math.max(0, b._lastHp - b.hp);
+      b._dealt = (b._dealt || 0) + drop;
+      const pl = this.player;
+      const ddx = b.x - pl.x, ddy = b.y - pl.y;
+      if (ddx * ddx + ddy * ddy < 700 * 700) b._engage = (b._engage || 0) + 0.25;
+
+      if ((b._engage || 0) < 1) { b._lastHp = b.hp; return; }
+
+      const dps = b._dealt / b._engage;
+      if (dps <= 0) { b._lastHp = b.hp; return; }
+
+      r.lastDps = dps;
+      const kd = Enemies.kindDef(b) || { hpMul: 1 };
+      const target = 55 + r.index * 5;
+      const want = Math.max(1, Math.round(dps * target * (kd.hpMul || 1)));
+      if (want > b._dealt) {
+        b.maxHp = want;
+        b.hp = want - b._dealt;
+      }
+      b._lastHp = b.hp;
+    },
+
+    updateSkillStorms(dt) {
+      const L = this.skillStorms;
+      if (!L || !L.length) return;
+      for (let i = L.length - 1; i >= 0; i--) {
+        const s = L[i];
+        s.t -= dt;
+        s.tick -= dt;
+        if (s.tick <= 0) {
+          s.tick = s.every;
+          if (s.fire) s.fire(this, s);
+        }
+        if (s.t <= 0) {
+          if (s.end && !s.done) { s.done = true; s.end(this, s); }
+          L.splice(i, 1);
+        }
+      }
+    },
+
     spawnTick(dt) {
       const t = this.time;
+
+      if (this.mode === 'bossRush') {
+        const r = this.bossRush;
+        if (!r) return;
+        const rt = 300 + t * 0.5 + r.index * 40;
+        this.spawnAcc += BAL.spawnRate(rt, false, 0) * dt;
+        if (Enemies.list.length >= MAX_ENEMIES) { this.spawnAcc = Math.min(this.spawnAcc, 3); return; }
+        const wts = Enemies.weights(rt);
+        while (this.spawnAcc >= 1) {
+          this.spawnAcc -= 1;
+          const pick = U.weighted(wts);
+          let count = 1;
+          if (pick.t === 'swarm') count = U.randInt(BAL.SPAWN_SWARM_MIN, BAL.SPAWN_SWARM_MAX);
+          else count = 2;
+          Enemies.spawnRing(this, pick.t, count);
+        }
+        return;
+      }
 
       while (this.bossQueue < BOSS_TIMES.length && t >= BOSS_TIMES[this.bossQueue]) {
         Enemies.spawnBoss(this, this.bossQueue);
@@ -618,6 +899,7 @@
     },
 
     spawnGem(x, y, val) {
+      if (this.noXp) return;
       if (this.gems.length > MAX_GEMS) {
         let g = null, bd = Infinity;
         for (let k = 0; k < 6; k++) {
@@ -667,6 +949,13 @@
         g.vx *= damp; g.vy *= damp;
         g.x += g.vx * dt;
         g.y += g.vy * dt;
+
+        if (g.rush) {
+          const d = Math.sqrt(d2) || 1;
+          const step = Math.min(d, 2600 * dt);
+          g.x += (dx / d) * step;
+          g.y += (dy / d) * step;
+        }
 
         if (d2 < (p.r + 12) * (p.r + 12)) {
           const ups = p.gainXp(g.val);
@@ -797,9 +1086,26 @@
       this.removeBossBar(e);
       if (this.boss === e) this.boss = null;
       this.updateBossHud();
-      this.chests.push({ x: e.x, y: e.y });
       FX.addFlash(0.7);
       FX.addShake(18);
+
+      if (this.mode === 'bossRush' && e.isRush) {
+        this.toast('领 主 已 击 破');
+        for (let i = 0; i < 5; i++) this.spawnHeal(e.x, e.y, 26);
+        FX.ring(e.x, e.y, '#9dff3c', 20, 250, 0.7, 5);
+        const r = this.bossRush;
+        if (r) {
+          r.kills++;
+          r.index++;
+          const dur = Math.max(1, this.time - (e.rushT0 || this.time - 1));
+          const dealt = e._dealt || 0;
+          if (dealt > 0 && dur >= 5) r.lastDps = dealt / dur;
+        }
+        this.spawnRushBoss();
+        return;
+      }
+
+      this.chests.push({ x: e.x, y: e.y });
       this.toast('领 主 已 击 破');
     },
 
@@ -986,7 +1292,7 @@
       return '<div class="f-ic" style="color:' + def.color + '">' + def.icon + '</div>' +
         '<div class="f-main">' +
           '<div class="f-line"><span class="f-name">' + def.name + '</span>' +
-            (tag ? '<span class="f-tag">' + tag + '</span>' : '') + '</div>' +
+            (tag ? '<span class="f-tag ' + tierCls(def.tier) + '">' + tag + '</span>' : '') + '</div>' +
           '<div class="f-desc">' + eff + ' · ' + def.brief + '</div>' +
           (foot ? '<div class="f-foot">' + foot + '</div>' : '') +
         '</div>';
@@ -1164,10 +1470,12 @@
         e.dead = false;
         e.hitFlash = 0;
         Enemies.enterPhase2(this, e);
+        if (this.bosses.indexOf(e) < 0) this.bosses.push(e);
       } else {
         const b = Enemies.spawnFinalBoss(this);
         Enemies.enterPhase2(this, b);
       }
+      this.boss = this.finalBoss;
 
       this.state = 'playing';
       Input.reset();
@@ -1299,7 +1607,7 @@
         Enemies.kill(this, e);
         n++;
       }
-      for (const g of this.gems) g.pulled = true;
+      for (const g of this.gems) { g.pulled = true; g.rush = true; }
 
       Sfx.play('bossdown');
       FX.addFlash(0.75);
@@ -1359,22 +1667,34 @@
       FX.burst(p.x, p.y, '#38f0ff', 70, { speed: 340, life: 1, size: 3.4 });
 
       const endlessOver = !!this.endless;
-      const BEST_KEY = endlessOver ? 'neon_survivor_best_endless' : 'neon_survivor_best';
+      const rushOver = this.mode === 'bossRush';
+      const BEST_KEY = rushOver ? 'neon_survivor_best_rush'
+        : (endlessOver ? 'neon_survivor_best_endless' : 'neon_survivor_best');
 
+      const rushBoss = rushOver
+        ? (Enemies.list.find((x) => x.rushFinal) || null) : null;
       const rec = {
         time: this.time, kills: this.kills, level: p.level,
         damage: Math.round(this.damageDone), win: !!win, at: Date.now(),
         endless: !!this.endless,
-        pct: this.endless && this.finalBoss ? Enemies.phase2Pct(this.finalBoss) : 0
+        pct: this.endless && this.finalBoss ? Enemies.phase2Pct(this.finalBoss) : 0,
+        mode: this.mode || 'story',
+        rushKills: rushOver && this.bossRush ? this.bossRush.kills : 0,
+        rushPct: rushBoss ? Enemies.phase2Pct(rushBoss) : 0
       };
       rec.endless = endlessOver;
       const best = U.store.get(BEST_KEY, null);
+      const score = rushOver ? rec.rushPct : (endlessOver ? rec.pct : rec.time);
+      const bestScore = best
+        ? (rushOver ? (best.rushPct || 0) : (endlessOver ? (best.pct || 0) : best.time))
+        : -1;
       let isNew = false;
-      if (!best || rec.time > best.time) { U.store.set(BEST_KEY, rec); isNew = true; }
+      if (score > bestScore) { U.store.set(BEST_KEY, rec); isNew = true; }
 
-      $('overTitle').textContent = endlessOver ? '无 尽 · 终 焉'
-        : (win ? '通 关 达 成' : '系 统 崩 溃');
-      const tc = endlessOver ? '#b14dff' : (win ? '#9dff3c' : '#ff4d6d');
+      $('overTitle').textContent = rushOver ? '挑 战 终 止'
+        : (endlessOver ? '无 尽 · 终 焉' : (win ? '通 关 达 成' : '系 统 崩 溃'));
+      const tc = rushOver ? '#ff8a3d'
+        : (endlessOver ? '#b14dff' : (win ? '#9dff3c' : '#ff4d6d'));
       $('overTitle').style.color = tc;
 
       let stats =
@@ -1383,7 +1703,11 @@
         statCard(rec.level, '等级') +
         statCard(rec.damage, '总伤害');
 
-      if (endlessOver) {
+      if (rushOver) {
+        stats +=
+          statCard(rec.rushKills + ' / 10', '击破领主') +
+          statCard(fmtPct(rec.rushPct), '最终领主伤害');
+      } else if (endlessOver) {
         stats +=
           statCard(U.formatTime(this.time - WIN_TIME), '无尽时长') +
           statCard(fmtPct(rec.pct), '领主伤害');
@@ -1407,6 +1731,12 @@
       $('timer').textContent = U.formatTime(this.time);
       $('lvNum').textContent = p.level;
       $('killNum').textContent = this.kills;
+      const rush = this.mode === 'bossRush' && this.bossRush;
+      $('lvWrap').classList.toggle('hidden', !!rush);
+      $('rushWrap').classList.toggle('hidden', !rush);
+      if (rush) $('rushNum').textContent = Math.min(rush.index + 1, rush.total) + ' / ' + rush.total;
+      const xpEl = $('xpFill');
+      if (xpEl) xpEl.style.opacity = this.noXp ? '0' : '1';
       this.updateSkillHud();
 
       this.updateBossHud();
@@ -1465,16 +1795,17 @@
         if (!nm || !fl) continue;
         if (b.phase2) {
           const pct = Enemies.phase2Pct(b);
-          fl.style.width = '100%';
+          const seg = pct - Math.floor(pct / 100) * 100;
+          fl.style.width = Math.max(4, Math.min(100, seg === 0 ? 100 : seg)) + '%';
           fl.className = 'boss-fill infinite';
           nm.className = 'boss-name p2';
-          nm.textContent = '◆ 最 终 领 主 · 二阶段 ' + fmtPct(pct) + ' ◆';
+          nm.textContent = '◆ 最 终 领 主 · 成绩 ' + fmtPct(pct) + ' ◆';
         } else {
           fl.className = 'boss-fill';
           nm.className = 'boss-name' + (b.isFinal ? ' final' : '');
           const r = U.clamp(b.hp / b.maxHp, 0, 1);
           fl.style.width = r * 100 + '%';
-          nm.textContent = (b.isFinal ? '◆ 最 终 领 主 ◆' : '◆ 领主 ' + (b.bossIndex + 1) + ' ◆') +
+          nm.textContent = '◆ ' + (b.bossName || (b.isFinal ? '最 终 领 主' : '领主 ' + (b.bossIndex + 1))) + ' ◆' +
             '　' + Math.ceil(r * 100) + '%';
         }
       }
@@ -1587,9 +1918,19 @@
 
     showBest() {
       const b = U.store.get('neon_survivor_best', null);
-      $('bestBox').innerHTML = b
-        ? '最佳记录　存活 <b>' + U.formatTime(b.time) + '</b> · 击杀 <b>' + b.kills + '</b> · 等级 <b>' + b.level + '</b>' + (b.win ? '　<span style="color:#9dff3c">已通关</span>' : '')
-        : '最佳记录：暂无';
+      const be = U.store.get('neon_survivor_best_endless', null);
+      const br = U.store.get('neon_survivor_best_rush', null);
+      let h = '';
+      h += b
+        ? '新篇　存活 <b>' + U.formatTime(b.time) + '</b> · 击杀 <b>' + b.kills + '</b> · 等级 <b>' + b.level + '</b>' + (b.win ? '　<span style="color:#9dff3c">已通关</span>' : '')
+        : '新篇：暂无记录';
+      if (be) {
+        h += '<br>无尽　领主伤害 <b>' + fmtPct(be.pct || 0) + '</b>';
+      }
+      if (br) {
+        h += '<br>领主挑战　击破 <b>' + (br.rushKills || 0) + ' / 10</b> · 最终伤害 <b>' + fmtPct(br.rushPct || 0) + '</b>';
+      }
+      $('bestBox').innerHTML = h;
     },
 
     render() {

@@ -34,8 +34,8 @@
     XP_P: 3.2200,
 
     BOSS_TIME_CAP: 600,
-    BOSS_HP_MUL: [4.87, 8.99, 8.79, 8.32, 11.31],
-    FINAL_HP_MUL: 19.07,
+    BOSS_HP_MUL: [4.28, 7.03, 9.49, 10.32, 16.36],
+    FINAL_HP_MUL: 15.23,
 
     ARMOR_CREEPEXP: 1.8,
     ARMOR_END: 1.2,
