@@ -1,7 +1,3 @@
-/* ===== 霓虹幸存者 · 样式 =====
-   视觉基调：深色底 + 细边框 + 中性阴影，靠留白与层级分区，
-   不使用彩色发光（text-shadow / box-shadow 的光晕）—— 长时间阅读会晃眼。
-   强调色只用于边框、图标与少量文字，不叠加光效。 */
 :root {
   --cyan: #6fb6c6;
   --magenta: #c973a8;
@@ -37,7 +33,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 
 .hidden { display: none !important; }
 
-/* ---------- HUD ---------- */
 #hud { position: absolute; inset: 0; pointer-events: none; padding: 14px; }
 
 .hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
@@ -97,7 +92,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .chip.pas { border-color: rgba(144, 132, 214, .45); }
 .chip.pas .lv { color: var(--violet); }
 
-/* Boss 血条 */
 .boss-wrap { position: absolute; top: 72px; left: 50%; transform: translateX(-50%); width: min(60vw, 460px); text-align: center; }
 .boss-name { font-size: 11px; letter-spacing: 3px; color: var(--magenta); margin-bottom: 4px; }
 .boss-bar { height: 8px; border: 1px solid rgba(201, 115, 168, .5); border-radius: 5px; overflow: hidden; background: rgba(0, 0, 0, .5); }
@@ -105,7 +99,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .boss-name.p2 { color: var(--violet) !important; }
 #bossFill.infinite { background: linear-gradient(90deg, #7a5cc0, #b0508c) !important; }
 
-/* Toast */
 .toast {
   position: absolute; top: 30%; left: 50%; transform: translate(-50%, 0);
   font-size: 22px; font-weight: 800; letter-spacing: 2px;
@@ -115,7 +108,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 }
 .toast.show { opacity: 1; transform: translate(-50%, -14px); }
 
-/* ---------- 全屏面板 ---------- */
 .screen {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -168,7 +160,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .howto b { color: #fff; }
 .howto b.danger { color: #e08ab8; }
 
-/* ---------- 按钮 ---------- */
 .btn {
   display: block; width: 100%; margin-top: 10px;
   padding: 13px 18px; font-size: 15px; font-weight: 700; letter-spacing: 2px;
@@ -192,7 +183,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 }
 .btn.danger:hover { background: rgba(201, 115, 168, .26); }
 
-/* ---------- 升级选卡 ---------- */
 #screenLevel { align-items: center; }
 .level-wrap { width: min(96vw, 900px); text-align: center; }
 .level-title {
@@ -232,7 +222,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .card .c-desc { margin-top: 9px; font-size: 12.5px; line-height: 1.7; color: #a4b0c6; flex: 1; }
 .card .c-desc .hl { color: var(--cyan); font-weight: 700; }
 
-/* 特效说明行 */
 .card .c-eff {
   margin-top: 8px; padding: 6px 9px; border-radius: 7px;
   font-size: 11.5px; line-height: 1.65; color: #a4b0c6;
@@ -242,7 +231,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .card .c-eff b { color: #fff; }
 .card .c-eff .dim { color: var(--dim); }
 
-/* 数值块：现在 / 升级后 */
 .card .c-body {
   margin-top: 9px; padding-top: 8px;
   border-top: 1px solid var(--line);
@@ -256,7 +244,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .card .c-row.next .ck { color: var(--cyan); }
 .card .c-row.next .cv { color: #fff; font-weight: 700; }
 
-/* 第一层：三类事件卡 */
 .card.kind { min-height: 200px; }
 .card.kind .c-ic { font-size: 28px; }
 .card.kind .c-name { font-size: 17px; }
@@ -268,7 +255,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 
 .reroll-box { margin-top: 16px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 
-/* ---------- 结算 ---------- */
 .over-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 14px; }
 .os-item {
   padding: 11px 8px; border-radius: 10px;
@@ -281,7 +267,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .pause-stats { font-size: 13px; line-height: 2; color: var(--dim); margin-bottom: 16px; }
 .pause-stats b { color: #fff; }
 
-/* ---------- 技能栏 ---------- */
 .skill-bar {
   position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; gap: 10px;
@@ -294,11 +279,9 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   display: flex; align-items: center; justify-content: center;
   transition: border-color .15s, box-shadow .15s;
 }
-/* 就绪：描边提亮，给出「可以放了」的信号 */
 .skill.ready { border-color: rgba(111, 182, 198, .75); }
 .skill.ready .sk-icon { opacity: 1; }
 
-/* 冷却中：整体压暗 + 斜纹遮罩，和就绪状态一眼区分 */
 .skill.cooling { border-color: rgba(255, 255, 255, .08); }
 .skill.cooling .sk-icon { opacity: .28; filter: grayscale(.7); }
 
@@ -309,7 +292,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
     -45deg, rgba(0, 0, 0, .72) 0 5px, rgba(0, 0, 0, .52) 5px 10px);
   border-top: 1px solid rgba(111, 182, 198, .5);
 }
-/* 冷却秒数：居中大号数字，压在图标上方 */
 .sk-cdnum {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -326,7 +308,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   text-align: center; font-size: 9px; letter-spacing: .5px;
   color: var(--dim); font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
-/* 冷却时键位变成一位小数的读秒（10 秒以上取整） */
 .sk-key.cd-num {
   color: #fff; font-size: 9.5px; font-weight: 700;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .95);
@@ -342,24 +323,53 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .skill.empty .sk-name { color: var(--dim); }
 .sk-icon.dim { color: var(--dim); font-size: 20px; }
 
-/* ---------- 融合界面 ---------- */
 .fusion-slots {
   display: flex; align-items: stretch; justify-content: center;
-  gap: 10px; margin: 20px 0 6px; flex-wrap: wrap;
+  gap: 8px; margin: 16px 0 6px; flex-wrap: nowrap;
 }
 .fslot {
-  width: min(40vw, 168px); min-height: 148px; padding: 14px 12px;
+  flex: 1 1 0; min-width: 0; min-height: 82px; padding: 10px 11px;
   border-radius: var(--r); border: 1px dashed var(--line2);
   background: rgba(0, 0, 0, .2);
-  display: flex; align-items: center; justify-content: center; text-align: center;
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  text-align: left;
 }
 .fslot.filled { border-style: solid; border-color: var(--line2); background: var(--panel2); }
 .fslot.result.filled { border-color: var(--violet); background: #1a1730; }
-.fslot.empty { opacity: .5; }
+.fslot.empty { opacity: .5; justify-content: center; text-align: center; }
 .fslot-hint { font-size: 12px; line-height: 1.7; color: var(--dim); }
-.fop { display: flex; align-items: center; font-size: 18px; color: var(--dim); }
-.card.fcard { position: relative; width: min(42vw, 190px); min-height: 158px; }
-.card.fcard.selected { border-color: var(--cyan); background: #1a2233; transform: translateY(-3px); }
+.fop { flex: none; display: flex; align-items: center; font-size: 15px; color: var(--dim); }
+
+#fusionList { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 16px; }
+
+.f-ic {
+  flex: none; width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--line);
+  font-size: 22px; line-height: 1;
+}
+.f-main { flex: 1; min-width: 0; }
+.f-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.f-name { font-size: 15px; font-weight: 800; color: #fff; }
+.f-tag {
+  flex: none; padding: 2px 8px; border-radius: 5px;
+  font-size: 10.5px; font-weight: 700;
+  background: rgba(144, 132, 214, .16); color: var(--violet);
+}
+.f-desc { margin-top: 4px; font-size: 12px; line-height: 1.6; color: #a4b0c6; }
+.f-foot { margin-top: 3px; font-size: 10.5px; line-height: 1.5; color: var(--cyan); }
+
+.fslot .f-ic { width: 34px; height: 34px; font-size: 18px; }
+.fslot .f-name { font-size: 13.5px; }
+.fslot .f-desc { margin-top: 3px; font-size: 11px; line-height: 1.5; }
+
+.card.fcard {
+  position: relative; width: min(92vw, 460px); min-height: 0;
+  flex-direction: row; align-items: center; gap: 12px;
+  padding: 11px 14px; text-align: left;
+}
+.card.fcard.selected { border-color: var(--cyan); background: #1a2233; transform: translateY(-2px); }
 .fsel-badge {
   position: absolute; top: -9px; right: -9px;
   padding: 3px 10px; border-radius: 5px; font-size: 10px; font-weight: 800;
@@ -373,8 +383,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .f-reason { margin-top: 6px; font-size: 10.5px; line-height: 1.5; color: var(--cyan); }
 .f-warn { margin-top: 5px; font-size: 11px; color: var(--amber); }
 
-/* ---------- 暂停菜单 ---------- */
-.pause-panel { width: min(96vw, 720px); }
+.pause-panel { width: min(96vw, 880px); }
 .tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
 .tab {
   padding: 7px 13px; font-size: 12px; font-family: inherit; cursor: pointer;
@@ -385,7 +394,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .tab:hover { color: #fff; }
 .tab.active { background: rgba(111, 182, 198, .16); border-color: var(--cyan); color: #fff; }
 .tabpane {
-  min-height: 210px; max-height: 52vh; overflow-y: auto;
+  min-height: 210px; max-height: 62vh; overflow-y: auto;
   text-align: left; margin-bottom: 14px; padding-right: 6px;
 }
 .tabpane::-webkit-scrollbar { width: 6px; }
@@ -397,7 +406,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .howto.compact { margin-bottom: 0; }
 .howto.compact li { font-size: 12.5px; line-height: 1.8; }
 
-/* ---------- 构筑 / 图鉴 ---------- */
 .build-sec { margin-bottom: 16px; }
 .build-h {
   font-size: 12px; letter-spacing: 1px; color: var(--cyan); font-weight: 700;
@@ -415,40 +423,43 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .build-row b { font-weight: 700; }
 .bdim { margin-left: auto; font-size: 11px; color: var(--dim); white-space: nowrap; }
 .build-note {
-  font-size: 12px; line-height: 1.8; color: #9da9c0;
+  font-size: 12.5px; line-height: 1.85; color: #a8b4c9;
   padding: 10px 12px; border-radius: 8px; margin-bottom: 10px;
   background: rgba(255, 255, 255, .04);
   border: 1px solid var(--line);
 }
 .build-note b { color: #d6deee; }
-.codex-lead { margin-bottom: 14px; }
+.codex-lead {
+  margin-bottom: 14px; border-left: 2px solid var(--cyan);
+  background: rgba(111, 182, 198, .07);
+}
 
-/* ---------- 配方矩阵 ---------- */
 .mx-wrap {
   overflow-x: auto; margin: 10px 0 12px; padding: 2px;
   border-radius: 8px; background: rgba(0, 0, 0, .2);
 }
-.mx { border-collapse: collapse; font-size: 11px; width: 100%; min-width: 620px; }
+.mx { border-collapse: collapse; font-size: 11.5px; width: 100%; min-width: 640px; }
 .mx th, .mx td {
   border: 1px solid rgba(255, 255, 255, .07);
   padding: 6px 5px; text-align: center; white-space: nowrap;
 }
-.mx thead th, .mx .mx-cor, .mx .mx-row { background: rgba(255, 255, 255, .05); color: #fff; font-weight: 700; }
-.mx .mx-cor { font-size: 9.5px; font-weight: 400; color: var(--dim); }
+.mx .mx-cor, .mx .mx-col { position: sticky; top: 0; z-index: 2; background: #151b29; }
+.mx .mx-cor { left: 0; z-index: 3; font-size: 9.5px; font-weight: 400; color: var(--dim); }
+.mx .mx-row { position: sticky; left: 0; z-index: 1; background: #151b29; }
+.mx thead th, .mx .mx-cor, .mx .mx-row { color: #fff; font-weight: 700; }
 .mx .mx-col { min-width: 64px; }
 .mx .mx-col span, .mx .mx-row span { display: block; font-size: 9.5px; font-weight: 400; color: #8b97b0; }
 .mx .mx-row { text-align: left; color: var(--cyan); min-width: 78px; }
 .mx .mx-cell { line-height: 1.25; }
 .mx .mx-cell .mi { display: block; font-size: 13px; }
-.mx .mx-cell .mn { display: block; font-size: 9.5px; color: #c3cddd; }
+.mx .mx-cell .mn { display: block; font-size: 10px; color: #cbd5e6; }
 .mx .mx-cell.same { background: rgba(207, 159, 78, .12); }
 .mx-legend { display: flex; gap: 8px; flex-wrap: wrap; font-size: 10.5px; color: var(--dim); }
 .mx-legend .lg { padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line); }
 
-/* ---------- 配方清单 / 判定规则 / S 阶清单 ---------- */
 .recipe-list {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
-  gap: 2px 12px; margin-top: 4px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(246px, 1fr));
+  gap: 2px 14px; margin-top: 4px;
 }
 .recipe-row {
   display: flex; align-items: baseline; gap: 6px;
@@ -463,29 +474,28 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .r-plus { display: inline-block; margin: 0 5px; color: var(--dim); }
 
 .rule-list { margin: 10px 0 4px; padding-left: 20px; }
-.rule-list li { font-size: 12.5px; line-height: 1.85; color: #b7c2d6; margin: 3px 0; }
+.rule-list li { font-size: 12.5px; line-height: 1.9; color: #b7c2d6; margin: 4px 0; }
 .rule-list li::marker { color: var(--cyan); }
 .rule-list b { color: #fff; }
 
 .s-list { display: grid; gap: 6px; margin-top: 6px; }
 .s-item {
-  padding: 8px 11px; border-radius: 8px;
+  padding: 9px 12px; border-radius: 8px;
   background: rgba(255, 255, 255, .035);
   border: 1px solid var(--line);
 }
 .s-head { display: flex; align-items: baseline; gap: 6px; font-size: 13px; }
 .s-head b { color: inherit; font-weight: 800; }
 .s-cnt { margin-left: auto; font-size: 10.5px; color: var(--dim); }
-.s-rec { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.s-rec { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 5px; }
 .rchip {
-  padding: 2px 8px; border-radius: 5px; font-size: 10.5px; color: #b7c2d6;
-  background: rgba(255, 255, 255, .04);
+  padding: 3px 9px; border-radius: 5px; font-size: 11px; color: #c3cddd;
+  background: rgba(255, 255, 255, .045);
   border: 1px solid var(--line);
 }
 .rmore { font-size: 10.5px; color: var(--dim); padding: 2px 4px; }
 .rk { display: inline-block; min-width: 20px; margin-right: 8px; color: var(--cyan); font-size: 14px; }
 
-/* ---------- 技能装配 ---------- */
 .sk-row {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 10px; margin: 5px 0; border-radius: 8px;
@@ -515,7 +525,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 }
 .sk-row.pick.on .sk-act { background: var(--cyan); color: #08131a; font-weight: 700; }
 
-/* ---------- 通关界面 ---------- */
 .win-tip {
   font-size: 13px; line-height: 1.85; color: #b7c2d6;
   margin: 4px 0 18px; padding: 13px 15px;
@@ -525,13 +534,11 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .win-tip strong { color: var(--cyan); }
 .win-tip strong.danger { color: #e08ab8; }
 
-/* ---------- 武备面板（盖在升级 / 暂停之上）---------- */
 .loadout-screen { z-index: 14; }
 .loadout-panel { width: min(94vw, 560px); text-align: left; }
 .loadout-panel .ph { text-align: center; }
 .loadout-panel #loadoutBox { max-height: 58vh; margin-bottom: 16px; }
 
-/* ---------- 窄屏 ---------- */
 @media (max-width: 620px) {
   .pause-panel, .loadout-panel { width: 96vw; padding: 22px 16px; }
   .recipe-list { grid-template-columns: 1fr; }
@@ -546,6 +553,14 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   .skill-bar { right: 8px; gap: 8px; }
   .skill { width: 46px; height: 46px; }
   .sk-icon { font-size: 19px; }
-  .fslot { min-height: 128px; padding: 10px 8px; }
   .tab { padding: 6px 9px; font-size: 11px; }
+  .fusion-slots { gap: 5px; }
+  .fop { font-size: 13px; }
+  .fslot { min-height: 74px; padding: 8px; gap: 7px; }
+  .fslot .f-ic { width: 30px; height: 30px; font-size: 16px; }
+  .fslot .f-desc { display: none; }
+  .card.fcard { gap: 10px; padding: 10px 12px; }
+  .f-ic { width: 38px; height: 38px; font-size: 20px; }
+  .f-name { font-size: 14px; }
+  .f-desc { font-size: 11.5px; line-height: 1.5; }
 }
