@@ -11,7 +11,6 @@
 <div id="app">
   <canvas id="game"></canvas>
 
-  <!-- ============ HUD ============ -->
   <div id="hud" class="hidden">
     <div class="hud-top">
       <div class="bars">
@@ -29,7 +28,6 @@
       <div id="psBar" class="chip-bar"></div>
     </div>
 
-    <!-- 技能栏 -->
     <div id="skillBar" class="skill-bar"></div>
 
     <div id="bossWrap" class="boss-wrap hidden">
@@ -40,7 +38,6 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <!-- ============ 主菜单 ============ -->
   <div id="screenMenu" class="screen">
     <div class="panel menu-panel">
       <h1 class="title">霓虹幸存者</h1>
@@ -52,9 +49,10 @@
 
       <div class="keys">
         <div class="key-row"><span class="key">W A S D</span><span class="ktxt">移动</span></div>
-        <div class="key-row"><span class="key">鼠标左键 / 拖动</span><span class="ktxt">朝指针移动（手机可拖动）</span></div>
-        <div class="key-row"><span class="key">SPACE / Q / E</span><span class="ktxt">技能槽 1 / 2 / 3（装配见暂停菜单「技能」页）</span></div>
-        <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停（含键位与图鉴）</span></div>
+        <div class="key-row"><span class="key">鼠标左键</span><span class="ktxt">按住朝指针移动</span></div>
+        <div class="key-row"><span class="key">拖动轮盘</span><span class="ktxt">移动端移动（轮盘在屏幕下方居中）</span></div>
+        <div class="key-row"><span class="key">SPACE / Q / E</span><span class="ktxt">技能 1 / 2 / 3（暂停菜单「技能」页装配）</span></div>
+        <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停 / 继续</span></div>
         <div class="key-row"><span class="key">M</span><span class="ktxt">开关音效</span></div>
       </div>
 
@@ -65,34 +63,32 @@
     </div>
   </div>
 
-  <!-- ============ 玩法说明 ============ -->
   <div id="screenHow" class="screen hidden">
     <div class="panel">
       <h2 class="ph">玩法说明</h2>
       <ul class="howto">
-        <li><b>自动战斗</b>　武器自动瞄准开火，你只需要专注走位与躲避。</li>
-        <li><b>升级强化</b>　经验满格后，先在「获取弹珠 / 弹珠强化 / 被动强化」三类中选一类，再在该类中三选一。弹珠候选每次可刷新一次。</li>
-        <li><b>弹珠 = 弹道 + 特效</b>　7 种基础弹珠 = 4 种纯形态（飞镖 / 爆破 / 激光 / 追踪）+ 3 种自带特效（雪花→冰霜、毒气→剧毒、电弧→感电）。<b>同一种可以重复持有</b>。</li>
-        <li><b>单体与范围</b>　雪花弹、毒气弹是<b>单体</b>：命中一个目标就消失。想让冰霜 / 剧毒变成范围效果，得合成出<b>爆破形态</b>的霜系 / 毒系弹珠（如霜爆轰炸、毒爆轰炸）—— 爆破落点会留下冰面或毒云残留。</li>
-        <li><b>合成弹珠更强</b>　A 阶与 S 阶弹珠每件额外多打 <b>2 发</b>投射物，配色也略有区别。</li>
-        <li><b>合成</b>　同阶任意两颗都能合成，<b>顺序不影响产物</b>：B + B → A（28 种），A + A → S（23 种）。产物等级 = 两颗等级之和。</li>
-        <li><b>等级区间</b>　B 阶 1~3 · A 阶 2~6 · S 阶 4~12。特效在所有等级都生效，数值随等级提升。</li>
-        <li><b>主动技能</b>　每合成出一件 S 阶弹珠解锁对应技能，最多携带 3 个，在暂停菜单「技能」页装配。</li>
-        <li><b>敌人预警</b>　精英（金色）与领主出手前，地面会亮起图形并逐渐填满 —— <b class="danger">红色</b>是重伤，<b class="danger">紫色</b>是秒杀，看到就躲开。</li>
-        <li><b>生命晶体</b>　绿色十字，掉落率远低于经验晶体，拾取回血；残血时吸附范围自动扩大。续航主要靠被动「纳米修复」。</li>
-        <li><b>敌人</b>　除常规的虫群、执行体、追猎者外，还有会打弹幕的<b>散射体</b>（扇形）、<b>旋涡</b>（旋转弹幕）、<b>弹幕塔</b>（环形弹幕）、<b>狙击体</b>（蓄力高速弹），以及死亡会分裂的<b>裂变体</b>和高护甲的<b>壁垒</b>。</li>
-        <li><b>领主</b>　随血量切换战斗阶段，招式从扇形冲击波、环形弹幕、冲撞、十字激光、旋转扫射、地雷阵、激光网、追踪弹、召唤援军中随机抽取，越到后面出招越密。击破后掉落宝箱，可从<b>智库</b>（等级 +3，连选三次）/ <b>肉身</b>（伤害 +10%、生命 +30）/ <b>祝福</b>（随机一个未知特殊效果）中选一项。</li>
-        <li><b>目标</b>　存活 15 分钟并击败最终领主即通关，之后可选择进入无尽模式；死亡同样结算成绩。</li>
+        <li><b>自动战斗</b>　武器自动开火，你只需走位与躲避。</li>
+        <li><b>升级</b>　两轮三选一：先选「弹珠 / 弹珠强化 / 被动强化」中的一类，再从 3 个候选里选 1 个。</li>
+        <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态（飞镖 / 爆破 / 激光 / 追踪）+ 3 种自带特效（雪花→冰霜、毒气→剧毒、电弧→感电）。同一种可重复持有。</li>
+        <li><b>弹数</b>　B 阶 1 发 · A 阶 3 发 · S 阶 5 发；被动「多重射击」对所有弹珠生效。</li>
+        <li><b>单体与范围</b>　雪花弹、毒气弹命中即消失。想让冰霜 / 剧毒变成范围，要合成<b>爆破形态</b>的霜系 / 毒系弹珠。</li>
+        <li><b>合成</b>　同阶任意两颗都能合成，顺序不影响产物：B + B → A（28 种），A + A → S（23 种）。产物等级 = 两颗之和。</li>
+        <li><b>等级</b>　B 1~3 · A 2~6 · S 4~12。特效在所有等级都生效。</li>
+        <li><b>技能</b>　每合成一件 S 阶弹珠解锁对应技能，最多带 3 个（暂停菜单「技能」页装配）。</li>
+        <li><b>预警</b>　精英与领主出手前，地面亮起图形并逐渐填满 —— <b class="danger">红色</b>重伤，<b class="danger">紫色</b>秒杀，看到就躲。</li>
+        <li><b>回血</b>　绿色十字晶体，掉落率低，残血时吸附范围更大；续航主要靠被动「纳米修复」。</li>
+        <li><b>敌人</b>　虫群、执行体、追猎者之外，还有打弹幕的散射体、旋涡、弹幕塔、狙击体，以及死亡分裂的裂变体和高护甲的壁垒。</li>
+        <li><b>领主</b>　随血量切换阶段，招式越来越密。击破掉落宝箱：智库（等级 +3）/ 肉身（伤害 +10%、生命 +30）/ 祝福（随机特殊效果）。</li>
+        <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，之后可进入无尽模式。</li>
       </ul>
       <button id="btnHowBack" class="btn primary">返 回</button>
     </div>
   </div>
 
-  <!-- ============ 升级选卡 ============ -->
   <div id="screenLevel" class="screen hidden">
     <div class="level-wrap">
       <div id="levelTitle" class="level-title">强 化 协 议</div>
-      <div id="levelSub" class="level-sub">选择一项加载到你的系统中</div>
+      <div id="levelSub" class="level-sub">选一项加进你的系统</div>
       <div id="cardBox" class="card-box"></div>
       <div id="rerollBox" class="reroll-box">
         <button id="btnLoadout" class="btn ghost small">▤ 武备</button>
@@ -102,13 +98,12 @@
     </div>
   </div>
 
-  <!-- ============ 武器融合 ============ -->
   <div id="screenFusion" class="screen hidden">
     <div class="level-wrap">
       <div class="level-title">融 合 协 议</div>
       <div class="level-sub">
-        只有<strong>同阶</strong>弹珠才能合成，点击两件即可配对，<strong>顺序不影响产物</strong>。<br>
-        产物等级 = 两颗等级之和（B 1~3 · A 2~6 · S 4~12）
+        只有<strong>同阶</strong>弹珠能合成，点两件即可配对，<strong>顺序不影响产物</strong>。<br>
+        产物等级 = 两颗之和（B 1~3 · A 2~6 · S 4~12）
       </div>
 
       <div class="fusion-slots">
@@ -126,17 +121,16 @@
         <button id="btnFuseSkip" class="btn ghost">暂 不 融 合</button>
       </div>
       <div class="fusion-tip">
-        消耗两件弹珠，产出一件更高阶的弹珠。<br>
-        具体产物由配方决定 —— 暂停菜单的<b>合成图鉴</b>可查看全部配方。
+        消耗两件弹珠，产出一件更高阶的弹珠。配方见暂停菜单的<b>融合图鉴</b>。<br>
+        弹数：B 阶 1 发 · A 阶 3 发 · S 阶 5 发。
       </div>
     </div>
   </div>
 
-  <!-- ============ 领主宝库 ============ -->
   <div id="screenChest" class="screen hidden">
     <div class="level-wrap">
       <div class="level-title">领 主 宝 库</div>
-      <div class="level-sub">击败领主的馈赠 —— 选择一项专属奖励</div>
+      <div class="level-sub">击败领主的馈赠 —— 三选一</div>
       <div id="chestBox" class="card-box"></div>
       <div class="reroll-box">
         <button id="btnChestSkip" class="btn ghost small">跳过（放弃奖励）</button>
@@ -144,7 +138,6 @@
     </div>
   </div>
 
-  <!-- ============ 武备（升级 / 暂停时查看构筑）============ -->
   <div id="screenLoadout" class="screen hidden loadout-screen">
     <div class="panel loadout-panel">
       <h2 class="ph">武 备</h2>
@@ -153,7 +146,6 @@
     </div>
   </div>
 
-  <!-- ============ 暂停（多标签）============ -->
   <div id="screenPause" class="screen hidden">
     <div class="panel pause-panel">
       <h2 class="ph">已 暂 停</h2>
@@ -176,32 +168,29 @@
           <div class="key-row"><span class="key">W A S D</span><span class="ktxt">移动</span></div>
           <div class="key-row"><span class="key">方向键</span><span class="ktxt">移动（同上）</span></div>
           <div class="key-row"><span class="key">鼠标左键</span><span class="ktxt">按住时朝指针移动</span></div>
-          <div class="key-row"><span class="key">拖动屏幕</span><span class="ktxt">移动端移动</span></div>
+          <div class="key-row"><span class="key">拖动轮盘</span><span class="ktxt">移动端移动，轮盘固定在屏幕下方居中</span></div>
           <div class="key-row"><span class="key">SPACE</span><span class="ktxt">技能槽 1</span></div>
           <div class="key-row"><span class="key">Q</span><span class="ktxt">技能槽 2</span></div>
           <div class="key-row"><span class="key">E</span><span class="ktxt">技能槽 3</span></div>
-          <div class="key-row"><span class="key">R</span><span class="ktxt">咆哮（需宝箱祝福解锁，冷却 120 秒）</span></div>
-          <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停 / 继续（含键位、构筑与图鉴）</span></div>
+          <div class="key-row"><span class="key">R</span><span class="ktxt">咆哮（宝箱祝福解锁，冷却 120 秒）</span></div>
+          <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停 / 继续</span></div>
           <div class="key-row"><span class="key">M</span><span class="ktxt">开关音效</span></div>
         </div>
       </div>
 
       <div id="tabRules" class="tabpane hidden">
         <ul class="howto compact">
-          <li><b>升级</b>　每次升级两轮三选一：先在 <b>获取弹珠 / 弹珠强化 / 被动强化</b> 三类中选一类，
-            再在该类的 3 个候选中选 1 个。已无法强化的类会置灰并写明原因。</li>
-          <li><b>刷新</b>　只有「获取弹珠」提供刷新，且每次升级限一次；候选固定为 B 阶弹珠，<b>可重复获得同一种</b> —— 两颗同种 B 阶才能合成对应的 A 阶。</li>
-          <li><b>合成</b>　每 5 级获得 1 次机会。同阶任意两颗都能合成，<b>顺序不影响产物</b>，
-            产物等级 = 两颗等级之和（B 1~3 · A 2~6 · S 4~12）。</li>
-          <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态（飞镖 / 爆破 / 激光 / 追踪）+ 3 种自带特效（雪花→冰霜、毒气→剧毒、电弧→感电）。</li>
-          <li><b>进阶</b>　7 种基础弹珠两两组合（可相同）= 28 种 A 阶弹珠，每种组合对应唯一产物。</li>
-          <li><b>终极</b>　28 种 A 阶两两组合 = 406 条，按规则判定产出 23 种 S 阶弹珠，完整配方见「合成图鉴」。</li>
-          <li><b>技能</b>　每合成出一件 S 阶弹珠，解锁其专属技能，最多携带 3 个（SPACE / Q / E）。</li>
-          <li><b>预警</b>　精英与领主攻击前地面亮起图形，颜色填满即爆发。<b class="danger">红色</b>造成重伤，<b class="danger">紫色</b>是秒杀技 —— 必须躲开。</li>
-          <li><b>生命晶体</b>　绿色十字，掉落率极低，回血；残血时吸附范围更大。续航主要靠被动「纳米修复」。</li>
-          <li><b>领主宝库</b>　三选一：<b>智库</b>（等级 +3，随即连选三次）/ <b>肉身</b>（伤害 +10%、生命上限 +30 并立即回复等量）/ <b>祝福</b>（随机一个未知特殊效果）。</li>
-          <li><b>祝福</b>　共三种，每种只能获得一次：<b>血族</b>（击败敌人时小概率回血）/ <b>不灭</b>（免疫一次致命伤，留 1 点生命并进入 3 秒无敌；挡不住紫色秒杀技）/ <b>咆哮</b>（R 键，冷却 120 秒，清场并吸收所有经验球，领主除外）。</li>
-          <li><b>目标</b>　存活 15 分钟，击败最终领主即通关；可选择继续挑战进入无尽模式。</li>
+          <li><b>升级</b>　两轮三选一：先选一类，再从 3 个候选里选 1 个。无法强化的类会置灰并写明原因。</li>
+          <li><b>刷新</b>　只有「获取弹珠」可刷新，每次升级限一次。B 阶可重复持有 —— 两颗同种才能合成对应 A 阶。</li>
+          <li><b>合成</b>　每 5 级 1 次机会。同阶任意两颗都能合成，顺序不影响产物，产物等级 = 两颗之和。</li>
+          <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态 + 3 种自带特效，两两组合 = 28 种 A 阶。</li>
+          <li><b>终极</b>　28 种 A 阶两两组合 = 406 条，产出 23 种 S 阶，配方见「融合图鉴」。</li>
+          <li><b>技能</b>　每件 S 阶弹珠解锁一个专属技能，最多带 3 个（SPACE / Q / E）。</li>
+          <li><b>预警</b>　地面图形填满即爆发。<b class="danger">红色</b>造成重伤，<b class="danger">紫色</b>是秒杀技 —— 必须躲开。</li>
+          <li><b>回血</b>　绿色十字，掉落率低，残血时吸附范围更大；续航靠被动「纳米修复」。</li>
+          <li><b>宝库</b>　智库（等级 +3，再选 3 次）/ 肉身（伤害 +10%、生命 +30）/ 祝福（随机特殊效果）。</li>
+          <li><b>祝福</b>　血族（击败敌人几率回血）/ 不灭（免疫一次致命伤，挡不住秒杀）/ 咆哮（R 键清场，冷却 120 秒），每种一次。</li>
+          <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，可继续挑战无尽模式。</li>
         </ul>
       </div>
 
@@ -214,22 +203,19 @@
     </div>
   </div>
 
-  <!-- ============ 通关（可选择继续挑战）============ -->
   <div id="screenWin" class="screen hidden">
     <div class="panel">
       <h2 id="winTitle" class="ph">通 关 达 成</h2>
       <div id="winStats" class="over-stats"></div>
       <p class="win-tip">
-        最终领主已被击溃。<br>
-        你可以保存成绩离开，也可以<strong class="danger">继续挑战</strong> ——
-        它会以更强的姿态归来，而这一次，<strong class="danger">它不会再倒下</strong>。
+        最终领主已被击溃。可以保存成绩离开，也可以<strong class="danger">继续挑战</strong> ——
+        它会以更强的姿态归来，而且<strong class="danger">不会再倒下</strong>。
       </p>
       <button id="btnWinSave" class="btn primary">保 存 成 绩 并 退 出</button>
       <button id="btnWinEndless" class="btn ghost danger">继 续 挑 战 · 无 尽 模 式</button>
     </div>
   </div>
 
-  <!-- ============ 结算 ============ -->
   <div id="screenOver" class="screen hidden">
     <div class="panel">
       <h2 id="overTitle" class="ph">系 统 崩 溃</h2>
@@ -243,6 +229,7 @@
 
 <script src="js/audio.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/balance.js"></script>
 <script src="js/input.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/telegraph.js"></script>
