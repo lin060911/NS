@@ -42,9 +42,9 @@
     },
     {
       id: 'expand', name: '扩散场', icon: '◯', color: '#9dff3c', maxLevel: 5,
-      brief: '扩大所有弹珠的作用范围（爆炸 / 毒云 / 光束）',
+      brief: '扩大所有弹珠的作用范围半径（爆炸 / 领域 / 光束）',
       desc: function (lv) {
-        const f = (k) => '范围 <b>' + pct(P18(k)) + '</b>　（+' + rnd((P18(k) - 1) * 100) + '%）';
+        const f = (k) => '范围半径 <b>×' + (1 + k * 0.10).toFixed(2) + '</b>　（+' + k * 10 + '%）';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },

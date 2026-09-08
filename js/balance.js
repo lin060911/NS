@@ -40,7 +40,14 @@
     ARMOR_CREEPEXP: 1.8,
     ARMOR_END: 1.2,
     SPD_MAX: 0.8,
-    DMG_MAX: 1.6
+    DMG_MAX: 1.6,
+
+    AREA_K: 0.5,
+    AREA_PER_LV: 0.10
+  };
+
+  BAL.area = function (v) {
+    return v * BAL.AREA_K;
   };
 
   BAL.spawnRate = function (t, endless, endlessStart) {

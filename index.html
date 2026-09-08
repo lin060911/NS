@@ -41,8 +41,8 @@
       <div class="subtitle">B U L L E T &nbsp; R A I N &nbsp; R O A M</div>
       <p class="desc">
         在弹雨中活下来。<br>
-        <strong>开启新篇</strong>　从零成长，通关后可把构筑存进存档。<br>
-        <strong>领主挑战</strong>　携带存档的构筑，连续迎战 10 位领主。
+        <strong>开启新篇</strong>　从零成长，通关后可存档。<br>
+        <strong>领主挑战</strong>　携带存档构筑，连战 10 位领主。
       </p>
 
       <div class="keys">
@@ -67,20 +67,14 @@
     <div class="panel">
       <h2 class="ph">玩法说明</h2>
       <ul class="howto">
-        <li><b>自动战斗</b>　武器自动开火，你只需走位与躲避。</li>
-        <li><b>升级</b>　两轮三选一：先选「弹珠 / 弹珠强化 / 被动强化」中的一类，再从 3 个候选里选 1 个。</li>
-        <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态（飞镖 / 爆破 / 激光 / 追踪）+ 3 种自带特效（雪花→冰霜、毒气→剧毒、电弧→感电）。同一种可重复持有。</li>
-        <li><b>子弹组</b>　所有弹珠基础都是 1 组；被动「多重射击」每级为<b>所有</b>弹珠 +1 组。</li>
-        <li><b>单体与范围</b>　雪花弹、毒气弹命中即消失。想让冰霜 / 剧毒变成范围，要合成<b>爆破形态</b>的霜系 / 毒系弹珠。</li>
-        <li><b>合成</b>　同阶任意两颗都能合成，顺序不影响产物：B + B → A（28 种），A + A → S（23 种）。产物等级 = 两颗之和。</li>
-        <li><b>等级</b>　B 1~3 · A 2~6 · S 4~12。特效在所有等级都生效。</li>
-        <li><b>技能</b>　金属风暴、饱和轰炸、湮灭光束、自动防御卫星、严冬、腐朽、天罚、混沌产物 这 8 件 S 阶各有专属技能，最多带 3 个（暂停菜单「技能」页装配）。</li>
-        <li><b>预警</b>　精英与领主出手前，地面亮起图形并逐渐填满 —— <b class="danger">红色</b>重伤，<b class="danger">紫色</b>秒杀，看到就躲。</li>
-        <li><b>回血</b>　绿色十字晶体，掉落率低，残血时吸附范围更大；续航主要靠被动「纳米修复」。</li>
-        <li><b>敌人</b>　虫群、执行体、追猎者之外，还有打弹幕的散射体、旋涡、弹幕塔、狙击体，以及死亡分裂的裂变体和高护甲的壁垒。</li>
-        <li><b>领主</b>　随血量切换阶段，招式越来越密。击破掉落宝箱：智库（所有弹珠 +1 级）/ 肉身（伤害 +10%）/ 祝福（随机特殊效果）。</li>
-        <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，可保存存档或进入无尽模式。</li>
-        <li><b>领主挑战</b>　选一个存档进挑战：不掉落经验、无法升级，领主被击败只掉血包；连战 10 位领主，第 10 位不死不灭，以对它造成的伤害百分比计成绩。</li>
+        <li><b>自动战斗</b>　武器自动开火，你只管走位和躲避。</li>
+        <li><b>升级</b>　先选一类（弹珠 / 弹珠强化 / 被动强化），再三选一。</li>
+        <li><b>合成</b>　同阶两颗即可合成，顺序不影响产物：B + B → A，A + A → S。</li>
+        <li><b>控制</b>　<b class="danger">冻结与麻痹对首领无效</b>，减速和易伤仍然有效。</li>
+        <li><b>预警</b>　地面图形填满即爆发。<b class="danger">红色</b>重伤，<b class="danger">紫色</b>秒杀，看到就躲。</li>
+        <li><b>回血</b>　绿色十字掉落率低，续航主要靠被动「纳米修复」。</li>
+        <li><b>技能</b>　8 件 S 阶各有专属大招，最多带 3 个（暂停菜单「技能」页装配）。</li>
+        <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关。</li>
       </ul>
       <button id="btnHowBack" class="btn primary">返 回</button>
     </div>
@@ -103,8 +97,7 @@
     <div class="level-wrap">
       <div class="level-title">融 合 协 议</div>
       <div class="level-sub">
-        只有<strong>同阶</strong>弹珠能合成，点两件即可配对，<strong>顺序不影响产物</strong>。<br>
-        产物等级 = 两颗之和（B 1~3 · A 2~6 · S 4~12）
+        只有<strong>同阶</strong>弹珠能合成，顺序不影响产物　·　产物等级 ＝ 两颗之和（B 1~3 · A 2~6 · S 4~12）
       </div>
 
       <div class="fusion-slots">
@@ -122,8 +115,7 @@
         <button id="btnFuseSkip" class="btn ghost">暂 不 融 合</button>
       </div>
       <div class="fusion-tip">
-        消耗两件弹珠，产出一件更高阶的弹珠。配方见暂停菜单的<b>融合图鉴</b>。<br>
-        子弹组：所有弹珠基础 1 组，多重射击每级 +1 组。
+        消耗两件，产出一件更高阶的弹珠　·　配方见暂停菜单的<b>融合图鉴</b>
       </div>
     </div>
   </div>
@@ -181,17 +173,14 @@
 
       <div id="tabRules" class="tabpane hidden">
         <ul class="howto compact">
-          <li><b>升级</b>　两轮三选一：先选一类，再从 3 个候选里选 1 个。无法强化的类会置灰并写明原因。</li>
-          <li><b>刷新</b>　只有「获取弹珠」可刷新，每次升级限一次。B 阶可重复持有 —— 两颗同种才能合成对应 A 阶。</li>
-          <li><b>合成</b>　每 5 级 1 次机会。同阶任意两颗都能合成，顺序不影响产物，产物等级 = 两颗之和。</li>
-          <li><b>弹珠</b>　7 种基础弹珠 = 4 种纯形态 + 3 种自带特效，两两组合 = 28 种 A 阶。</li>
-          <li><b>终极</b>　28 种 A 阶两两组合 = 406 条，产出 23 种 S 阶，配方见「融合图鉴」。</li>
-          <li><b>技能</b>　8 件 S 阶弹珠各有专属大招（金属风暴 / 饱和轰炸 / 湮灭光束 / 自动防御卫星 / 严冬 / 腐朽 / 天罚 / 混沌产物），最多带 3 个。</li>
-          <li><b>预警</b>　地面图形填满即爆发。<b class="danger">红色</b>造成重伤，<b class="danger">紫色</b>是秒杀技 —— 必须躲开。</li>
-          <li><b>回血</b>　绿色十字，掉落率低，残血时吸附范围更大；续航靠被动「纳米修复」。</li>
-          <li><b>宝库</b>　智库（所有弹珠 +1 级）/ 肉身（伤害 +10%）/ 祝福（随机特殊效果）。</li>
-          <li><b>祝福</b>　猎人（对领主 +20% 伤害，对杂兵 -15%）/ 不灭（免疫一次致命伤，挡不住秒杀）/ 咆哮（R 键清场，冷却 120 秒），每种一次。</li>
-          <li><b>目标</b>　存活 15 分钟后最终领主降临，击破即通关，可继续挑战无尽模式。</li>
+          <li><b>升级</b>　先选一类，再三选一；不可选的类会置灰。</li>
+          <li><b>刷新</b>　仅「获取弹珠」可刷新，每次升级限一次。</li>
+          <li><b>合成</b>　每 5 级 1 次机会，同阶随意配对，产物等级 ＝ 两颗之和。</li>
+          <li><b>控制</b>　<b class="danger">冻结 / 麻痹对首领无效</b>，减速与易伤仍可生效。</li>
+          <li><b>范围</b>　被动「扩散场」每级半径 +10%，满级 +50%。</li>
+          <li><b>预警</b>　<b class="danger">红色</b>重伤，<b class="danger">紫色</b>秒杀，必须躲开。</li>
+          <li><b>宝库</b>　智库（弹珠 +1 级）/ 肉身（伤害 +10%）/ 祝福（特殊效果）。</li>
+          <li><b>目标</b>　存活 15 分钟击破最终领主即通关。</li>
         </ul>
       </div>
 
@@ -209,8 +198,8 @@
       <h2 id="winTitle" class="ph">通 关 达 成</h2>
       <div id="winStats" class="over-stats"></div>
       <p class="win-tip">
-        最终领主已被击溃。可以保存成绩离开，也可以<strong class="danger">继续挑战</strong> ——
-        它会以更强的姿态归来，而且<strong class="danger">不会再倒下</strong>。
+        最终领主已被击溃。可以存档离开，也可以<strong class="danger">继续挑战</strong> ——
+        它会更强，且<strong class="danger">不会再倒下</strong>。
       </p>
       <button id="btnWinSave" class="btn primary">保 存 存 档</button>
       <button id="btnWinEndless" class="btn ghost danger">继 续 挑 战 · 无 尽 模 式</button>
@@ -233,7 +222,7 @@
   <div id="screenSaveName" class="screen hidden">
     <div class="panel">
       <h2 class="ph">保 存 存 档</h2>
-      <p class="win-tip">为本次通关的构筑命名，最多保留 <b>10</b> 个存档（超出会挤掉最早的）。</p>
+      <p class="win-tip">为本次通关的构筑命名，最多保留 <b>10</b> 个存档。</p>
       <input id="saveNameInput" class="name-input" type="text" maxlength="16" placeholder="未命名存档">
       <div id="saveNameErr" class="save-err hidden"></div>
       <button id="btnSaveNameOk" class="btn primary">确 认 保 存</button>

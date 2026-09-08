@@ -9,7 +9,7 @@
 
     frost: {
       id: 'frost', name: '冰霜', icon: '❄', color: '#7ad7ff',
-      brief: '减速目标，叠满层数后将其完全冻结',
+      brief: '减速目标，叠满层数后将其完全冻结（首领免疫）',
       onHit(G, e, pw) {
         e.slowT = Math.max(e.slowT || 0, 1.2 + pw);
         e.frostStack = (e.frostStack || 0) + 1;
@@ -37,9 +37,9 @@
 
     shock: {
       id: 'shock', name: '麻痹', icon: '⚡', color: '#ffe14d',
-      brief: '麻痹目标，并向邻近敌人传导伤害',
+      brief: '麻痹目标，并向邻近敌人传导伤害（首领免疫）',
       onHit(G, e, pw, dmg) {
-        e.paralyze = Math.max(e.paralyze || 0, 0.3 + pw * 0.55);
+        if (!e.isBoss) e.paralyze = Math.max(e.paralyze || 0, 0.3 + pw * 0.55);
         const jumps = 1 + Math.round(pw * 2);
         const hit = [e];
         let cx = e.x, cy = e.y;
@@ -48,7 +48,7 @@
           if (!n) break;
           hit.push(n);
           fx().bolt(cx, cy, n.x, n.y, '#ffe14d', 0.14, 14);
-          n.paralyze = Math.max(n.paralyze || 0, 0.2 + pw * 0.4);
+          if (!n.isBoss) n.paralyze = Math.max(n.paralyze || 0, 0.2 + pw * 0.4);
           E().damage(G, n, dmg * (0.3 + pw * 0.4), {
             angle: U.angle(cx, cy, n.x, n.y), knock: 20
           });
@@ -92,6 +92,8 @@
 
     tick(G, e, dt) {
       let stop = false;
+
+      if (e.isBoss) { e.frozen = 0; e.paralyze = 0; }
 
       if (e.frozen > 0) {
         e.frozen -= dt;
@@ -172,7 +174,7 @@
     },
 
     para(e, dur) {
-      if (!e || e.dead) return;
+      if (!e || e.dead || e.isBoss) return;
       e.paralyze = Math.max(e.paralyze || 0, dur);
     },
 

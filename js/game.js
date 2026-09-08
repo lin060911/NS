@@ -303,8 +303,8 @@
       const pick = this._savesPurpose !== 'manage';
       $('savesTitle').textContent = pick ? '领 主 挑 战' : '存 档 管 理';
       $('savesTip').textContent = pick
-        ? '选择一个存档，携带它的构筑进入挑战（不掉落经验，无法升级）'
-        : '最多保留 10 个存档，超出会挤掉最早的';
+        ? '选择存档，携带其构筑进入挑战（不掉经验 · 无法升级）'
+        : '最多保留 10 个存档，超出挤掉最早的';
       if (!list.length) {
         box.innerHTML = '<div class="sv-empty">暂无存档 —— 先在「开启新篇」通关并保存</div>';
         return;
@@ -496,7 +496,7 @@
       if (spec.freeze) out.push('命中<b>冻结 ' + spec.freeze.toFixed(1) + ' 秒</b>（首领免疫）');
       if (spec.vuln) out.push('易伤 <b>' + pc(spec.vuln[0]) + '</b>（首领 <b>' + pc(spec.vuln[1]) + '</b>）');
       if (spec.dot) out.push('持续扣血 <b>' + pc(spec.dot) + '</b> / 命中伤害 · 持续 ' + (spec.dotT || 3) + ' 秒');
-      if (spec.para) out.push('麻痹 <b>' + spec.para.toFixed(1) + ' 秒</b>');
+      if (spec.para) out.push('麻痹 <b>' + spec.para.toFixed(1) + ' 秒</b>（首领免疫）');
       if (spec.chainOnHit) out.push('命中连锁 <b>' + spec.chainOnHit + '</b> 个敌人');
       if (spec.branchChain) out.push('传导 <b>' + spec.branchChain[1] + '</b> 个 · 共 <b>' + spec.branchChain[0] + '</b> 次');
       if (spec.pierceBoom) out.push('每次穿透<b>引发爆炸</b>');
@@ -507,7 +507,7 @@
       if (spec.pierce !== undefined && spec.pierce > 0) out.push('穿透 <b>' + spec.pierce + '</b> 个');
       if (spec.speed) out.push('飞行速度 <b>' + Math.round(spec.speed) + '</b>');
       if (spec.width) out.push('光束宽度 <b>' + Math.round(spec.width) + '</b>');
-      if (spec.blastR) out.push('爆炸半径 <b>' + Math.round(spec.blastR) + '</b>');
+      if (spec.blastR) out.push('爆炸半径 <b>' + Math.round(spec.blastR * BAL.AREA_K) + '</b>');
       if (spec.big) out.push('<b>强化版</b> · 弹体与特效更大');
       return out;
     },
@@ -690,8 +690,7 @@
         ch += '</div>';
       }
 
-      ch += '<div class="build-note">金属风暴、饱和轰炸、湮灭光束、自动防御卫星、严冬、腐朽、天罚、混沌产物 ' +
-        '这 <b>8</b> 件 S 阶各有专属大招，冷却 60~90 秒，最多带 <b>' +
+      ch += '<div class="build-note">8 件 S 阶各带一个专属大招，冷却 60~90 秒，最多装配 <b>' +
         Abilities.MAX_SLOTS + '</b> 个。</div>';
 
       const box = $('tabSkills');

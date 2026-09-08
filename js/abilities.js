@@ -2,6 +2,7 @@
   'use strict';
 
   const U = global.U;
+  const BAL = global.BAL;
   const TAU = Math.PI * 2;
   const FX = () => global.FX;
   const E = () => global.Enemies;
@@ -41,7 +42,7 @@
 
   function metalCyclone(G) {
     const p = G.player;
-    const R = 400 * (1 + p.areaMul * 0.5);
+    const R = BAL.area(400) * (1 + p.areaMul);
     const dmg = lv(G, 90);
     let a0 = 0;
     storm(G, {
@@ -52,7 +53,7 @@
           const aa = a0 + (i / 5) * TAU;
           const d = R * (0.28 + 0.72 * ((GG.time * 1.6 + i * 0.2) % 1));
           const x = p.x + Math.cos(aa) * d, y = p.y + Math.sin(aa) * d;
-          hurtArea(GG, x, y, 92, dmg, '#c8d2e8', [], 40);
+          hurtArea(GG, x, y, BAL.area(92), dmg, '#c8d2e8', [], 40);
           FX().ring(x, y, '#c8d2e8', 4, 44, 0.18, 2);
         }
       },
@@ -75,11 +76,11 @@
           const a = Math.random() * TAU;
           const d = Math.random() * 460;
           const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
-          W().explode(GG, x, y, 150, dmg, '#ff8a3d', 90, []);
+          W().explode(GG, x, y, BAL.area(150), dmg, '#ff8a3d', 90, []);
         }
       },
       end(GG) {
-        W().explode(GG, p.x, p.y, 320, dmg * 3, '#ffd23c', 140, []);
+        W().explode(GG, p.x, p.y, BAL.area(320), dmg * 3, '#ffd23c', 140, []);
         FX().addFlash(0.5); FX().addShake(14);
       }
     });
@@ -121,10 +122,11 @@
       dur: 5, every: 0.22,
       fire(GG) {
         const bl = E().bullets;
+        const clrR = BAL.area(330);
         for (let k = bl.length - 1; k >= 0; k--) {
           const b = bl[k];
           const dx = b.x - p.x, dy = b.y - p.y;
-          if (dx * dx + dy * dy < 330 * 330) {
+          if (dx * dx + dy * dy < clrR * clrR) {
             bl.splice(k, 1);
             FX().burst(b.x, b.y, '#ffc93c', 2, { speed: 60, life: 0.3, size: 2 });
           }
@@ -182,7 +184,7 @@
   function plagueBurst(G) {
     const p = G.player;
     const dmg = lv(G, 22);
-    const R = 480 * (1 + p.areaMul * 0.5);
+    const R = BAL.area(480) * (1 + p.areaMul);
     storm(G, {
       dur: 5, every: 0.36,
       fire(GG) {
@@ -220,12 +222,13 @@
           FX().bolt(x - 24, y - 1100, x, y, '#ffe14d', 0.22, 44);
           FX().bolt(x + 18, y - 1100, x, y, '#ffffff', 0.18, 30);
           FX().ring(x, y, '#ffe14d', 8, 130, 0.32, 4);
-          const near = E().near(x, y, 190);
+          const SR = BAL.area(190);
+          const near = E().near(x, y, SR);
           for (const e of near) {
             if (e.dead || e.hp <= 0) continue;
             const dx = e.x - x, dy = e.y - y;
-            if (dx * dx + dy * dy > 190 * 190) continue;
-            e.paralyze = Math.max(e.paralyze || 0, 0.9);
+            if (dx * dx + dy * dy > SR * SR) continue;
+            if (!e.isBoss) e.paralyze = Math.max(e.paralyze || 0, 0.9);
             E().damage(GG, e, dmg, { effects: [{ id: 'shock', pw: 1 }], knock: 40 });
           }
         }
@@ -241,7 +244,7 @@
     const e0 = E().nearest(p.x, p.y, 900) || null;
     const x = e0 ? e0.x : p.x + 200, y = e0 ? e0.y : p.y;
     const dmg = lv(G, 42);
-    const R = 340 * (1 + p.areaMul * 0.6);
+    const R = BAL.area(340) * (1 + p.areaMul);
     W().addCloud({
       x: x, y: y, r: R, life: 4,
       dps: dmg * 3, effects: [], pull: 1.6, color: '#9b6bff', bossPull: 0

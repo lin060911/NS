@@ -3,6 +3,7 @@
 
   const U = global.U;
   const FX = global.FX;
+  const BAL = global.BAL;
   const TAU = Math.PI * 2;
 
   const BASE = {
@@ -27,7 +28,7 @@
 
     if (ps.power) p.dmgMul += Math.pow(1.18, ps.power) - 1;
     if (ps.overclock) p.cdMul *= Math.pow(1 / 1.18, ps.overclock);
-    if (ps.expand) p.areaMul += Math.pow(1.18, ps.expand) - 1;
+    if (ps.expand) p.areaMul += (BAL.AREA_PER_LV || 0.1) * ps.expand;
     if (ps.split) p.amount += ps.split;
     if (ps.thruster) p.speed *= Math.pow(1.10, ps.thruster);
     if (ps.plating) p.maxHpBase += 15 * ps.plating;

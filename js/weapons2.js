@@ -5,6 +5,7 @@
   const Weapons = global.Weapons;
   const U = global.U;
   const FX = global.FX;
+  const BAL = global.BAL;
   const Enemies = global.Enemies;
   const FXC = global.FX;
   const TAU = Math.PI * 2;
@@ -38,8 +39,9 @@
       effects: def.effects, color: def.color,
       shape: 'shuriken', spec: def.spec,
       spiral: true, ox: p.x, oy: p.y,
-      spiralA: a, spiralR: 10, spiralV: 210,
-      spiralAcc: 620, spiralW: 2.3, spiralMax: 560,
+      spiralA: a, spiralR: 10, spiralV: 60,
+      spiralAcc: 140, spiralW: 9.0, spiralMax: 560,
+      rehitCd: 0.30,
       life: 3, travel: 0, knock: 30
     });
   }
@@ -48,7 +50,7 @@
     const p = P();
     const s = def.stats(w.level, G.player);
     const g = s.groups;
-    const r = opt.r * (1 + (opt.rGrow || 0) * (g - 1)) * (1 + p.areaMul * 0.6);
+    const r = BAL.area(opt.r) * (1 + (opt.rGrow || 0) * (g - 1)) * (1 + p.areaMul);
     const rate = 1 + 0.2 * (g - 1);
     const cycle = opt.cycle / rate;
     const vuln = opt.vuln + (opt.vulnGrow || 0) * (g - 1);
@@ -118,7 +120,7 @@
           }
           continue;
         }
-        v.cur = n; v.hit.push(n); v.t = 0;
+        v.cur = n; v.hit.push(n); v.t = 0.5;
       }
       v.t -= dt;
       if (v.t > 0) continue;
@@ -149,8 +151,8 @@
     const am = p.areaMul || 0;
     const n = 6 + (g - 1);
     const orbit = 86 * (1 + am * 0.55);
-    const hitR = 34 * (1 + am * 0.9);
-    const clearR = 42 * (1 + am * 0.9);
+    const hitR = BAL.area(34) * (1 + am);
+    const clearR = BAL.area(42) * (1 + am);
     w._satN = n;
     w._satR = orbit;
     w._satA = (w._satA || 0) + 2.2 * dt;
@@ -193,7 +195,7 @@
           r: 9, dmg: s.dmg * g / n * 2.8, pierce: 0, hits: [],
           effects: def.effects, color: def.color,
           shape: 'missile', trail: '#ffc93c',
-          spec: def.spec, blastR: 92,
+          spec: def.spec, blastR: BAL.area(92),
           life: 3, travel: 0, knock: 30
         });
       }
@@ -255,7 +257,7 @@
       if (!best) best = Enemies.nearest(p.x, p.y, 900);
       if (!best) continue;
       const x = best.x, y = best.y;
-      const strikeR = (132 + 16 * (s.groups - 1)) * (1 + (p.areaMul || 0) * 0.7);
+      const strikeR = BAL.area(132 + 16 * (s.groups - 1)) * (1 + (p.areaMul || 0));
       FXC.bolt(x - 30, y - 1100, x, y, def.color, 0.3, 52);
       FXC.bolt(x + 26, y - 1100, x, y, '#ffffff', 0.24, 38);
       FXC.bolt(x, y - 1100, x, y, '#fff6b0', 0.18, 22);
@@ -282,7 +284,7 @@
       const tgt = Enemies.nearest(p.x, p.y, Weapons.searchR(G) * 1.3);
       const x = tgt ? tgt.x : p.x + (Math.random() - 0.5) * 240;
       const y = tgt ? tgt.y : p.y + (Math.random() - 0.5) * 240;
-      const r = (128 + 26 * (g - 1)) * (1 + p.areaMul * 0.6);
+      const r = BAL.area(128 + 26 * (g - 1)) * (1 + p.areaMul);
       const life = 2.2;
       Weapons.addCloud({
         x: x, y: y, r: r, life: life,
@@ -362,26 +364,26 @@
   }
 
   const A_DEFS = [
-    { id: 'a01', name: '锐穿', form: 'pierce', cd: 1.1, dps: 355, effects: [], icon: '✸', color: '#dfe6f2', brief: '手里剑穿刺，判定更宽',
+    { id: 'a01', name: '锐穿', form: 'pierce', cd: 1.1, dps: 355, effects: [], icon: '✸', color: '#dfe6f2', brief: '手里剑穿刺',
       spec: { shape: 'shuriken', r: 12, pierce: 3 } },
-    { id: 'a02', name: '穿甲弹', form: 'pierce', cd: 1.3, dps: 323, effects: [], icon: '◆', color: '#ff5a2d', brief: '穿透敌人，每次穿透引发爆炸',
+    { id: 'a02', name: '穿甲弹', form: 'pierce', cd: 1.3, dps: 323, effects: [], icon: '◆', color: '#ff5a2d', brief: '穿透敌人，引发爆炸',
       spec: { r: 8, pierce: 4, pierceBoom: 0.5, pierceBoomR: 84, trail: '#ff5a2d' } },
     { id: 'a03', name: '光能镖', form: 'pierce', cd: 0.5, dps: 375, effects: [], icon: '◆', color: '#b14dff', brief: '紫色光刃，飞行更快伤害更高',
       spec: { r: 7, speed: 1080, dmgMul: 1.15, trail: '#b14dff' } },
-    { id: 'a04', name: '哨箭', form: 'seek', cd: 1.1, dps: 327, effects: [], icon: '➤', color: '#ffc93c', brief: '红色拖尾，穿透后追击下一个敌人',
-      spec: { r: 7, speed: 470, turn: 5, pierce: 5, retarget: true, trail: '#ff4d6d' } },
+    { id: 'a04', name: '哨箭', form: 'seek', cd: 1.1, dps: 327, effects: [], icon: '➤', color: '#ff3c3c', brief: '勇度的哨箭',
+      spec: { r: 7, speed: 470, turn: 5, pierce: 5, retarget: true, trail: '#ff0000' } },
     { id: 'a05', name: '多重轰炸', form: 'blast', cd: 1.5, dps: 300, effects: [], icon: '◉', color: '#ff8a3d', brief: '爆炸后分裂三枚小炸弹再爆',
       spec: { splitInto: 3, splitMul: 0.42 } },
-    { id: 'a06', name: '爆炸光束', form: 'ray', cd: 0.9, dps: 311, effects: [], icon: '═', color: '#ff3ec8', brief: '细激光慢速射出，沿途连续爆炸',
+    { id: 'a06', name: '爆炸光束', form: 'ray', cd: 0.9, dps: 311, effects: [], icon: '═', color: '#ff3ec8', brief: '激光沿途连续爆炸',
       spec: { width: 7, len: 520, blastR: 74 }, fire: beamBarrage },
-    { id: 'a07', name: '跟踪导弹', form: 'seek', cd: 1.2, dps: 333, effects: [], icon: '➤', color: '#ffc93c', brief: '火光拖尾炮弹，慢速追踪高爆',
+    { id: 'a07', name: '跟踪导弹', form: 'seek', cd: 1.2, dps: 333, effects: [], icon: '➤', color: '#ffc93c', brief: '炮弹追踪',
       spec: { r: 9, speed: 215, turn: 3.2, shape: 'missile', trail: '#ff5a2d',
         blastR: 108, blastGrow: 0.06, hitBoom: 108, hitBoomMul: 0.62 } },
-    { id: 'a08', name: '能量光柱', form: 'ray', cd: 0.4, dps: 375, effects: [], icon: '═', color: '#ff3ec8', brief: '粗激光贯穿全场',
+    { id: 'a08', name: '能量光柱', form: 'ray', cd: 0.4, dps: 375, effects: [], icon: '═', color: '#ff3ec8', brief: '贯穿全场',
       spec: { width: 40, len: 720 } },
-    { id: 'a09', name: '光速追踪弹', form: 'seek', cd: 0.7, dps: 429, effects: [], icon: '➤', color: '#b14dff', brief: '紫色拖尾瞬发，命中后直线穿透',
-      spec: { r: 7, speed: 980, turn: 7, pierce: 3, trail: '#b14dff' } },
-    { id: 'a10', name: '多发追踪', form: 'seek', cd: 1.0, dps: 330, effects: [], icon: '➤', color: '#ffc93c', brief: '每组件：一枚大追踪弹＋两枚小追踪弹',
+    { id: 'a09', name: '光速追踪弹', form: 'seek', cd: 0.7, dps: 429, effects: [], icon: '➤', color: '#b14dff', brief: '高速打击锁定目标',
+      spec: { r: 7, speed: 1080, turn: 7, pierce: 3, trail: '#b14dff' } },
+    { id: 'a10', name: '多发追踪', form: 'seek', cd: 1.0, dps: 330, effects: [], icon: '➤', color: '#ffc93c', brief: '一枚大追踪弹＋两枚小追踪弹',
       spec: { speed: 420 }, fire: satBarrage },
     { id: 'a11', name: '冰晶镖', form: 'pierce', cd: 1.0, dps: 285, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '命中直接冻结（首领除外）',
       spec: { r: 9, pierce: 2, freeze: 1.5, hitFx: true } },
@@ -445,23 +447,23 @@
   });
 
   const S_DEFS = [
-    { id: 's01', name: '金属风暴', form: 'pierce', cd: 0.38, dps: 2000, effects: [], icon: '✸', color: '#dfe6f2', brief: '螺旋向外的飞刀，越远越快',
+    { id: 's01', name: '金属风暴', form: 'pierce', cd: 0.38, dps: 3600, effects: [], icon: '✸', color: '#dfe6f2', brief: '螺旋向外的杀戮光环',
       spec: { shape: 'shuriken', r: 10, pierce: 99 } },
     { id: 's02', name: '饱和轰炸', form: 'blast', cd: 1.2, dps: 2000, effects: [], icon: '◉', color: '#ff8a3d', brief: '大范围炸弹二次分裂五枚',
       spec: { blastR: 150, blastGrow: 0.05 }, fire: bombVolley },
-    { id: 's03', name: '湮灭光束', form: 'ray', cd: 0.38, dps: 2000, effects: [], icon: '═', color: '#ff3ec8', brief: '双向激光绕身旋转扫射',
-      spec: { width: 16, len: 640 } },
+    { id: 's03', name: '湮灭光束', form: 'ray', cd: 0.38, dps: 20000, effects: [], icon: '═', color: '#ff3ec8', brief: '双向激光绕身旋转扫射',
+      spec: { width: 26, len: 640 } },
     { id: 's04', name: '自动防御卫星', form: 'seek', cd: 0.44, dps: 2000, effects: [], icon: '◎', color: '#ffc93c', brief: '卫星群消解弹幕并炮击',
       spec: { hitBoom: 92, hitBoomMul: 0.55 }, update: satUpdate, drawFx: drawSats },
-    { id: 's05', name: '严冬', form: 'crystal', cd: 0.95, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '强化冰霜领域，范围与减速更强',
+    { id: 's05', name: '严冬', form: 'crystal', cd: 0.95, dps: 800, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '强化冰霜领域，范围与减速更强',
       spec: {}, aura: function (G, w, dt, def) {
-        fieldAura(G, w, dt, def, { r: 204, rGrow: 0.10, cycle: 5.3, vuln: 0.40, vulnGrow: 0.025, bossVuln: 0.25, slow: 1, dot: 0.5, dmgK: 0.6 });
+        fieldAura(G, w, dt, def, { r: 600, rGrow: 0.10, cycle: 5.3, vuln: 0.40, vulnGrow: 0.025, bossVuln: 0.25, slow: 1, dot: 0.5, dmgK: 0.6 });
       }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#7ad7ff'); } },
-    { id: 's06', name: '腐朽', form: 'spore', cd: 0.9, dps: 2000, effects: [], icon: '✤', color: '#9dff3c', brief: '周身毒气领域，伤害随子弹组提升',
+    { id: 's06', name: '腐朽', form: 'spore', cd: 0.9, dps: 800, effects: [], icon: '✤', color: '#9dff3c', brief: '周身毒气领域，伤害随子弹组提升',
       spec: {}, aura: function (G, w, dt, def) {
-        fieldAura(G, w, dt, def, { r: 168, rGrow: 0.10, cycle: 99, vuln: 0, vulnGrow: 0, bossVuln: 0, slow: 0, dot: 1.5, dmgK: 0.7 });
+        fieldAura(G, w, dt, def, { r: 580, rGrow: 0.10, cycle: 99, vuln: 0, vulnGrow: 0, bossVuln: 0, slow: 0, dot: 1.5, dmgK: 0.7 });
       }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#9dff3c'); } },
-    { id: 's07', name: '天罚', form: 'chain', cd: 0.95, dps: 2000, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '每秒落雷，传导麻痹并造成巨量伤害',
+    { id: 's07', name: '天罚', form: 'chain', cd: 0.95, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '每秒落雷，传导麻痹并造成巨量伤害',
       spec: {}, update: judgeUpdate, drawFx: null },
     { id: 's08', name: '极寒病毒＋', form: 'crystal', cd: 0.95, dps: 2100, effects: ['frost', 'venom'], icon: '❄', color: '#7ad7ff', brief: '强化极寒病毒，易伤与剧毒更高',
       spec: { r: 15, vuln: [0.42, 0.22], dot: 1.25, dotT: 3, hitFx: true, big: true, trail: '#7ad7ff' } },
@@ -473,27 +475,27 @@
       spec: { r: 14, pierce: 4, freeze: 2.0, hitFx: true, big: true, trail: '#7ad7ff' } },
     { id: 's12', name: '毒刃', form: 'pierce', cd: 0.66, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '毒气镖强化，剧毒持续腐蚀',
       spec: { r: 14, pierce: 4, dot: 1.3, dotT: 3, big: true, trail: '#9dff3c' } },
-    { id: 's13', name: '雷刃', form: 'pierce', cd: 0.7, dps: 2000, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电弧镖强化，命中大面积连锁',
+    { id: 's13', name: '雷刃', form: 'pierce', cd: 0.7, dps: 1400, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电弧镖强化，命中大面积连锁',
       spec: { r: 14, pierce: 4, chainOnHit: 6, chainRange: 240, hitFx: true, big: true, trail: '#ffe14d' } },
     { id: 's14', name: '霜爆', form: 'blast', cd: 1.4, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻炸弹强化，大范围减速易伤',
       spec: { blastR: 138, aoeSlow: 3, vuln: [0.35, 0.16], big: true, trail: '#7ad7ff' } },
     { id: 's15', name: '毒爆', form: 'blast', cd: 1.36, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '毒气炸弹强化，范围剧毒',
       spec: { blastR: 138, dot: 1.15, dotT: 4, big: true, trail: '#9dff3c' } },
-    { id: 's16', name: '雷爆', form: 'blast', cd: 1.44, dps: 2000, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '超载炸弹强化，麻痹连锁七敌',
+    { id: 's16', name: '雷爆', form: 'blast', cd: 1.44, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '超载炸弹强化，麻痹连锁七敌',
       spec: { blastR: 138, para: 0.9, chainOnHit: 7, chainRange: 260, big: true, trail: '#ffe14d' } },
     { id: 's17', name: '寂寒冲', form: 'ray', cd: 0.46, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻光线强化，减速易伤更强',
       spec: { width: 34, len: 720, aoeSlow: 2, vuln: [0.35, 0.16], big: true } },
     { id: 's18', name: '死灵哀', form: 'ray', cd: 0.44, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '剧毒激光强化，极速掉血',
       spec: { width: 30, len: 720, dot: 1.6, dotT: 3, big: true } },
-    { id: 's19', name: '天明闪', form: 'ray', cd: 0.48, dps: 2000, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电磁光束强化，麻痹传导七敌',
+    { id: 's19', name: '天明闪', form: 'ray', cd: 0.48, dps: 1400, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电磁光束强化，麻痹传导七敌',
       spec: { width: 30, len: 720, para: 0.9, chainOnHit: 7, chainRange: 260, big: true } },
     { id: 's20', name: '霜雪寻踪', form: 'seek', cd: 0.56, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻追踪弹强化，冻结并高额易伤',
       spec: { r: 11, speed: 560, freeze: 2.0, vuln: [0.45, 0.22], hitFx: true, big: true, trail: '#7ad7ff' } },
     { id: 's21', name: '基因锁定', form: 'seek', cd: 0.54, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '剧毒追踪弹强化，锁定即腐蚀',
       spec: { r: 11, speed: 560, dot: 1.45, dotT: 3, big: true, trail: '#9dff3c' } },
-    { id: 's22', name: '雷神锚点', form: 'seek', cd: 0.58, dps: 2000, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '追踪麻痹并连锁七敌',
+    { id: 's22', name: '雷神锚点', form: 'seek', cd: 0.58, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '追踪麻痹并连锁七敌',
       spec: { r: 11, speed: 560, para: 0.9, chainOnHit: 7, chainRange: 250, big: true, trail: '#ffe14d' } },
-    { id: 's23', name: '混沌产物', form: 'spore', cd: 0.95, dps: 2000, effects: [], icon: '◍', color: '#9b6bff', brief: '黑洞牵引吞噬，范围随子弹组增长',
+    { id: 's23', name: '混沌产物', form: 'spore', cd: 5, dps: 18000, effects: [], icon: '◍', color: '#9b6bff', brief: '黑洞牵引吞噬，范围随子弹组增长',
       spec: {}, update: anomalyUpdate }
   ];
 
@@ -510,13 +512,16 @@
       def.update = function (G, w, dt) {
         const s = this.stats(w.level, G.player);
         const p = G.player;
+        const step = 0.09;
         w._ba = (w._ba || 0) + 1.5 * dt;
-        cool(w, s, dt, () => {
-          const n = s.groups * 2;
-          for (let i = 0; i < n; i++) {
-            fireBeam(G, p.x, p.y, w._ba + i / n * TAU, s, this, 0.5);
-          }
-        });
+        w._bt = (w._bt === undefined ? 0 : w._bt) - dt;
+        if (w._bt > 0) return;
+        w._bt = step;
+        const n = s.groups * 2;
+        const per = s.dmg * step / s.cd / n;
+        for (let i = 0; i < n; i++) {
+          Weapons.beamHit(G, p.x, p.y, w._ba + i / n * TAU, s.len, s.width, per, this, 0);
+        }
       };
       def.drawFx = function (ctx, G, w, def) {
         const p = G.player;

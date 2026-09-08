@@ -5,6 +5,7 @@
   const U = global.U;
   const FX = global.FX;
   const Effects = global.Effects;
+  const BAL = global.BAL;
   const TAU = Math.PI * 2;
 
   const TIER_COUNT = { 1: 1, 2: 1, 3: 1 };
@@ -75,20 +76,20 @@
           s.speed = sp.speed || 440; s.knock = 40; break;
         case 'blast':
           s.speed = sp.speed || 380;
-          s.blastR = (sp.blastR || 78) * (1 + P.areaMul) * geo * (1 + (sp.blastGrow || 0) * (groups - 1));
+          s.blastR = BAL.area(sp.blastR || 120) * (1 + P.areaMul) * geo * (1 + (sp.blastGrow || 0) * (groups - 1));
           s.knock = 70; break;
         case 'spore':
           s.speed = sp.speed || 300;
           s.cloudLife = 3 * (0.7 + n * 0.6); break;
         case 'chain':
           s.jumps = sp.jumps || Math.max(3, Math.round(3 * geo));
-          s.range = (sp.range || 250) * (1 + P.areaMul * 0.5); s.knock = 40; break;
+          s.range = (sp.range || 250) * (1 + P.areaMul); s.knock = 40; break;
         case 'seek':
           s.speed = sp.speed || 340; s.knock = 30; break;
         case 'ray':
-          s.width = (sp.width || 14) * (1 + P.areaMul * 0.4);
-          s.len = (sp.len || 620) * (1 + P.areaMul * 0.3);
-          s.blastR = (sp.blastR || 70) * (1 + P.areaMul) * geo; s.knock = 50; break;
+          s.width = (sp.width || 14) * (1 + P.areaMul);
+          s.len = (sp.len || 620) * (1 + P.areaMul);
+          s.blastR = BAL.area(sp.blastR || 70) * (1 + P.areaMul) * geo; s.knock = 50; break;
       }
       if (sp.speedMul) s.speed *= sp.speedMul;
       return s;
@@ -134,12 +135,12 @@
           sp.branchChain[1], b.effects, b.color, sp);
       }
       if (sp.hitBoom) {
-        const br = sp.hitBoom === true ? (b.blastR || 70) : sp.hitBoom;
+        const br = sp.hitBoom === true ? (b.blastR || BAL.area(70)) : BAL.area(sp.hitBoom);
         this.explode(G, e.x, e.y, br, dmg * (sp.hitBoomMul || 0.5),
           b.color, 25, b.effects, sp);
       }
       if (sp.pierceBoom) {
-        this.explode(G, e.x, e.y, sp.pierceBoomR || 74, dmg * sp.pierceBoom,
+        this.explode(G, e.x, e.y, BAL.area(sp.pierceBoomR || 74), dmg * sp.pierceBoom,
           b.color, 30, b.effects);
       }
       if (sp.hitFx) {
@@ -320,7 +321,7 @@
             if (c.slow) {
               e.slowT = Math.max(e.slowT || 0, c.slowT || 0.8);
             }
-            if (c.stun) e.paralyze = Math.max(e.paralyze || 0, c.stun);
+            if (c.stun && !e.isBoss) e.paralyze = Math.max(e.paralyze || 0, c.stun);
           }
         }
         c.acc = (c.acc || 0) + dt;
@@ -377,6 +378,10 @@
           b.x = b.ox + Math.cos(b.spiralA) * b.spiralR;
           b.y = b.oy + Math.sin(b.spiralA) * b.spiralR;
           b.vx = Math.cos(b.spiralA); b.vy = Math.sin(b.spiralA);
+          if (b.rehitCd) {
+            b.reT = (b.reT === undefined ? b.rehitCd : b.reT) - dt;
+            if (b.reT <= 0) { b.reT = b.rehitCd; b.hits.length = 0; }
+          }
           if (b.spiralR > b.spiralMax) { B.splice(i, 1); continue; }
         }
 
@@ -741,17 +746,17 @@
   Weapons.makeWeapon = makeWeapon;
 
   const B_DEFS = [
-    { id: 'pierce',  name: '飞镖弹',   form: 'pierce',  icon: '◆', cd: 1.2, dps: 100, color: '#c8d2e8', brief: '尖锐弹体高速飞出，穿透敌人',
+    { id: 'pierce',  name: '飞镖弹',   form: 'pierce',  icon: '◆', cd: 1.2, dps: 100, color: '#c8d2e8', brief: '高速穿透',
       spec: { shape: 'bolt', speed: 780, r: 6 } },
-    { id: 'blast',   name: '爆破弹',   form: 'blast',   icon: '◉', cd: 2.2, dps: 80,  color: '#ff8a3d', brief: '抛射落地，范围爆轰',
+    { id: 'blast',   name: '爆破弹',   form: 'blast',   icon: '◉', cd: 2.2, dps: 80,  color: '#ff8a3d', brief: '范围爆炸',
       spec: { shape: 'orb' } },
-    { id: 'ray',     name: '激光',     form: 'ray',     icon: '═', cd: 0.4, dps: 125, color: '#ff3ec8', brief: '持续光束，直线贯穿' },
-    { id: 'seek',    name: '追踪弹头', form: 'seek',    icon: '➤', cd: 1.0, dps: 90,  color: '#ffc93c', brief: '自动追踪，必定命中',
+    { id: 'ray',     name: '激光',     form: 'ray',     icon: '═', cd: 0.4, dps: 125, color: '#ff3ec8', brief: '光束贯穿' },
+    { id: 'seek',    name: '追踪弹头', form: 'seek',    icon: '➤', cd: 1.0, dps: 90,  color: '#ffc93c', brief: '自动追踪',
       spec: { speed: 215 } },
-    { id: 'crystal', name: '雪花弹',   form: 'crystal', icon: '❖', cd: 1.5, dps: 120, color: '#7ad7ff', brief: '雪花飞出，命中减速冻结',
+    { id: 'crystal', name: '雪花弹',   form: 'crystal', icon: '❖', cd: 1.5, dps: 120, color: '#7ad7ff', brief: '减速冻结',
       spec: { shape: 'snow', r: 9, hitFx: true } },
-    { id: 'spore',   name: '毒气弹',   form: 'spore',   icon: '✤', cd: 0.9, dps: 162, color: '#9dff3c', brief: '锁敌单体，叠毒持续掉血' },
-    { id: 'chain',   name: '电弧链',   form: 'chain',   icon: '⚡', cd: 1.2, dps: 88,  color: '#ffe14d', brief: '电弧跳跃，连锁感电' }
+    { id: 'spore',   name: '毒气弹',   form: 'spore',   icon: '✤', cd: 0.9, dps: 162, color: '#9dff3c', brief: '单体叠毒' },
+    { id: 'chain',   name: '电弧链',   form: 'chain',   icon: '⚡', cd: 1.2, dps: 88,  color: '#ffe14d', brief: '连锁感电' }
   ];
   for (const c of B_DEFS) {
     const F = global.FORMS[c.form];
