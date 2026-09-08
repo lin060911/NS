@@ -85,7 +85,6 @@
       return {
         id: 'sv' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
         name: (extra && extra.name) || '未命名存档',
-        at: Date.now(),
         level: P.level,
         power: this.powerIndex(P),
         dmgBonus: P.dmgBonus || 0,
@@ -105,7 +104,7 @@
       P.weaponSeq = 0;
       for (const w of rec.weapons) {
         if (!global.Weapons.defs[w.id]) continue;
-        P.weapons.push({ id: w.id, level: w.level, t: 0, data: {}, id2: P.weaponSeq++ });
+        P.weapons.push({ id: w.id, level: w.level, t: 0, id2: P.weaponSeq++ });
       }
       P.passives = Object.create(null);
       const src = rec.passives || {};

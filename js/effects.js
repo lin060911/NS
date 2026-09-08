@@ -59,9 +59,6 @@
   };
 
   const Effects = {
-    DEFS: DEFS,
-
-    def(id) { return DEFS[id]; },
     name(id) { return DEFS[id] ? DEFS[id].name : ''; },
     color(id) { return DEFS[id] ? DEFS[id].color : '#8fa3c8'; },
     icon(id) { return DEFS[id] ? DEFS[id].icon : '·'; },
@@ -176,19 +173,6 @@
     para(e, dur) {
       if (!e || e.dead || e.isBoss) return;
       e.paralyze = Math.max(e.paralyze || 0, dur);
-    },
-
-    slow(e, dur) {
-      if (!e || e.dead || e.isBoss) return;
-      e.slowT = Math.max(e.slowT || 0, dur);
-    },
-
-    active(e) {
-      const out = [];
-      if (e.frozen > 0) out.push('frost');
-      if (e.venomStack > 0) out.push('venom');
-      if (e.paralyze > 0) out.push('shock');
-      return out;
     }
   };
 

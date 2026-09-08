@@ -57,7 +57,7 @@
           FX().ring(x, y, '#c8d2e8', 4, 44, 0.18, 2);
         }
       },
-      end(GG) {
+      end() {
         FX().ring(p.x, p.y, '#ffffff', R * 0.3, R * 1.15, 0.5, 6);
         FX().addShake(10);
       }
@@ -110,7 +110,7 @@
           FX().bolt(p.x, p.y, ex, ey, '#ff3ec8', 0.1, 26);
         }
       },
-      end(GG) { FX().addFlash(0.45); FX().addShake(12); }
+      end() { FX().addFlash(0.45); FX().addShake(12); }
     });
     G.toast('◆ 湮 灭 射 线 ◆');
   }
@@ -144,7 +144,7 @@
         }
         FX().ring(p.x, p.y, 'rgba(255,201,60,.25)', 300, 320, 0.2, 3);
       },
-      end(GG) { FX().ring(p.x, p.y, '#ffc93c', 60, 340, 0.5, 6); FX().addShake(8); }
+      end() { FX().ring(p.x, p.y, '#ffc93c', 60, 340, 0.5, 6); FX().addShake(8); }
     });
     G.toast('◆ 轨 道 炮 幕 ◆');
   }
@@ -234,7 +234,7 @@
         }
         FX().addShake(3);
       },
-      end(GG) { FX().addFlash(0.5); FX().addShake(14); }
+      end() { FX().addFlash(0.5); FX().addShake(14); }
     });
     G.toast('◆ 天 罚 雷 暴 ◆');
   }
@@ -253,7 +253,7 @@
     FX().addFlash(0.4);
     storm(G, {
       dur: 4, every: 0.25,
-      fire(GG) {
+      fire() {
         FX().ring(x, y, 'rgba(155,107,255,.3)', R * 0.5, R, 0.24, 3);
         const near = E().near(x, y, R + 60);
         for (const en of near) {
@@ -286,7 +286,7 @@
     'satellite':   make('satellite',   '轨道炮幕', '➤', '#ffc93c', 60, '持续 5 秒，卫星消解弹幕并齐射导弹', orbitalBarrage),
     'deepwinter':  make('deepwinter',  '绝对零度', '❄', '#7ad7ff', 80, '全场冻结 4.2 秒，解冻瞬间碎裂爆伤', absoluteZero),
     'decay':       make('decay',       '瘟疫爆发', '☣', '#9dff3c', 70, '持续 5 秒剧毒领域，全场叠毒腐蚀', plagueBurst),
-    'judgement':   make('judgement',   '天罚雷暴', '⚡', '#ffe14d', 85, '持续 4.5 秒全屏落雷，劈中者麻痹', thunderStorm),
+    'judgement':   make('judgement',   '天罚雷暴', '≶', '#ffe14d', 85, '持续 4.5 秒全屏落雷，劈中者麻痹', thunderStorm),
     'singularity': make('singularity', '奇点坍缩', '◍', '#9b6bff', 90, '张开黑洞吸附全场 4 秒，随后坍缩爆轰', singularityCollapse)
   };
 
@@ -294,7 +294,6 @@
     BIND: BIND,
     defs: DEFS,
     MAX_SLOTS: MAX_SLOTS,
-    SLOT_KEYS: SLOT_KEYS,
     cd: {},
     loadout: [],
 
@@ -332,7 +331,6 @@
     equipped(id) { return this.loadout.indexOf(id) >= 0; },
     slotKey(i) { return SLOT_KEYS[i] || '-'; },
     ready(id) { return (this.cd[id] || 0) <= 0; },
-    ratio(id) { return U.clamp((this.cd[id] || 0) / DEFS[id].cd, 0, 1); },
 
     useSlot(G, i) {
       const id = this.loadout[i];

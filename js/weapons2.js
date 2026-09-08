@@ -7,7 +7,6 @@
   const FX = global.FX;
   const BAL = global.BAL;
   const Enemies = global.Enemies;
-  const FXC = global.FX;
   const TAU = Math.PI * 2;
 
   function cool(w, s, dt, cb) {
@@ -17,17 +16,6 @@
   }
 
   function P() { return global.Game.player; }
-
-  function fireBeam(G, x, y, a, s, def, dmgMul) {
-    Weapons.add({
-      type: 'beam', x: x, y: y, a: a,
-      w: s.width, len: s.len, dmg: 0,
-      effects: def.effects, color: def.color,
-      life: 0.36, max: 0.36, travel: 0, hits: [],
-      vx: Math.cos(a), vy: Math.sin(a), r: 0, pierce: 999
-    });
-    Weapons.beamHit(G, x, y, a, s.len, s.width, s.dmg * (dmgMul || 1), def, s.knock);
-  }
 
   function spiralKnife(G, s, def, i, n) {
     const p = P();
@@ -115,7 +103,7 @@
           v.a += dt * 3.2;
           v.hit.length = 0;
           if (Math.random() < dt * 8) {
-            FXC.burst(p.x + Math.cos(v.a) * 52, p.y + Math.sin(v.a) * 52,
+            FX.burst(p.x + Math.cos(v.a) * 52, p.y + Math.sin(v.a) * 52,
               def.color, 1, { speed: 24, life: 0.3, size: 2.4 });
           }
           continue;
@@ -126,7 +114,7 @@
       if (v.t > 0) continue;
       v.t = 0.5;
       const cur = v.cur;
-      FXC.bolt(p.x, p.y, cur.x, cur.y, def.color, 0.16, 18);
+      FX.bolt(p.x, p.y, cur.x, cur.y, def.color, 0.16, 18);
       const crit = G.rollCrit();
       const final = s.dmg * (crit > 1 ? crit : 1);
       Enemies.damage(G, cur, final, { angle: 0, knock: 12, crit: crit > 1, effects: def.effects });
@@ -134,7 +122,7 @@
       global.Effects.para(cur, 0.7);
       const nx = Enemies.nearest(cur.x, cur.y, 300, v.hit);
       if (nx) {
-        FXC.bolt(cur.x, cur.y, nx.x, nx.y, def.color, 0.16, 14);
+        FX.bolt(cur.x, cur.y, nx.x, nx.y, def.color, 0.16, 14);
         v.hit.push(nx);
         v.cur = nx;
       } else {
@@ -168,7 +156,7 @@
         const dx = b.x - x, dy = b.y - y;
         if (dx * dx + dy * dy < clearR * clearR) {
           bl.splice(k, 1);
-          FXC.burst(b.x, b.y, '#ffc93c', 3, { speed: 70, life: 0.3, size: 2.2 });
+          FX.burst(b.x, b.y, '#ffc93c', 3, { speed: 70, life: 0.3, size: 2.2 });
         }
       }
       if (hit) {
@@ -258,14 +246,14 @@
       if (!best) continue;
       const x = best.x, y = best.y;
       const strikeR = BAL.area(132 + 16 * (s.groups - 1)) * (1 + (p.areaMul || 0));
-      FXC.bolt(x - 30, y - 1100, x, y, def.color, 0.3, 52);
-      FXC.bolt(x + 26, y - 1100, x, y, '#ffffff', 0.24, 38);
-      FXC.bolt(x, y - 1100, x, y, '#fff6b0', 0.18, 22);
-      FXC.ring(x, y, def.color, 10, strikeR, 0.46, 6);
-      FXC.ring(x, y, '#ffffff', 4, strikeR * 0.55, 0.28, 3);
-      FXC.burst(x, y, def.color, 26, { speed: 230, life: 0.55, size: 3.4 });
-      FXC.addFlash(0.12);
-      FXC.addShake(2.4);
+      FX.bolt(x - 30, y - 1100, x, y, def.color, 0.3, 52);
+      FX.bolt(x + 26, y - 1100, x, y, '#ffffff', 0.24, 38);
+      FX.bolt(x, y - 1100, x, y, '#fff6b0', 0.18, 22);
+      FX.ring(x, y, def.color, 10, strikeR, 0.46, 6);
+      FX.ring(x, y, '#ffffff', 4, strikeR * 0.55, 0.28, 3);
+      FX.burst(x, y, def.color, 26, { speed: 230, life: 0.55, size: 3.4 });
+      FX.addFlash(0.12);
+      FX.addShake(2.4);
       const crit = G.rollCrit();
       const direct = s.dmg * 2.4 * (crit > 1 ? crit : 1);
       Enemies.damage(G, best, direct, { angle: 0, knock: 40, crit: crit > 1, effects: def.effects });
@@ -291,8 +279,8 @@
         dps: s.dmg * 0.42 * g, effects: def.effects,
         pull: 1, color: def.color, bossPull: 0
       });
-      FXC.ring(x, y, def.color, 8, r, 0.5, 5);
-      FXC.burst(x, y, def.color, 28, { speed: -200, life: 0.7, size: 3 });
+      FX.ring(x, y, def.color, 8, r, 0.5, 5);
+      FX.burst(x, y, def.color, 28, { speed: -200, life: 0.7, size: 3 });
       global.Sfx.play('explode');
     });
   }
@@ -364,11 +352,11 @@
   }
 
   const A_DEFS = [
-    { id: 'a01', name: '锐穿', form: 'pierce', cd: 1.1, dps: 355, effects: [], icon: '✸', color: '#dfe6f2', brief: '手里剑穿刺',
+    { id: 'a01', name: '锐穿', form: 'pierce', cd: 1.1, dps: 355, effects: [], icon: '◆', color: '#dfe6f2', brief: '手里剑穿刺',
       spec: { shape: 'shuriken', r: 12, pierce: 3 } },
-    { id: 'a02', name: '穿甲弹', form: 'pierce', cd: 1.3, dps: 323, effects: [], icon: '◆', color: '#ff5a2d', brief: '穿透敌人，引发爆炸',
+    { id: 'a02', name: '穿甲弹', form: 'pierce', cd: 1.3, dps: 323, effects: [], icon: '⪢', color: '#ff5a2d', brief: '穿透敌人，引发爆炸',
       spec: { r: 8, pierce: 4, pierceBoom: 0.5, pierceBoomR: 84, trail: '#ff5a2d' } },
-    { id: 'a03', name: '光能镖', form: 'pierce', cd: 0.5, dps: 375, effects: [], icon: '◆', color: '#b14dff', brief: '紫色光刃，飞行更快伤害更高',
+    { id: 'a03', name: '光能镖', form: 'pierce', cd: 0.5, dps: 375, effects: [], icon: '⪢', color: '#b14dff', brief: '紫色光刃，飞行更快伤害更高',
       spec: { r: 7, speed: 1080, dmgMul: 1.15, trail: '#b14dff' } },
     { id: 'a04', name: '哨箭', form: 'seek', cd: 1.1, dps: 327, effects: [], icon: '➤', color: '#ff3c3c', brief: '勇度的哨箭',
       spec: { r: 7, speed: 470, turn: 5, pierce: 5, retarget: true, trail: '#ff0000' } },
@@ -385,29 +373,29 @@
       spec: { r: 7, speed: 1080, turn: 7, pierce: 3, trail: '#b14dff' } },
     { id: 'a10', name: '多发追踪', form: 'seek', cd: 1.0, dps: 330, effects: [], icon: '➤', color: '#ffc93c', brief: '一枚大追踪弹＋两枚小追踪弹',
       spec: { speed: 420 }, fire: satBarrage },
-    { id: 'a11', name: '冰晶镖', form: 'pierce', cd: 1.0, dps: 285, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '命中直接冻结（首领除外）',
+    { id: 'a11', name: '冰晶镖', form: 'pierce', cd: 1.0, dps: 285, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '命中直接冻结',
       spec: { r: 9, pierce: 2, freeze: 1.5, hitFx: true } },
     { id: 'a12', name: '毒气镖', form: 'pierce', cd: 1.0, dps: 276, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '命中持续扣血',
       spec: { r: 9, pierce: 2, dot: 0.9, dotT: 3 } },
-    { id: 'a13', name: '电弧镖', form: 'pierce', cd: 1.0, dps: 300, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '命中对周围连锁电击',
+    { id: 'a13', name: '电弧镖', form: 'pierce', cd: 1.0, dps: 300, effects: ['shock'], icon: '≶', color: '#ffe14d', brief: '命中对周围连锁电击',
       spec: { r: 9, pierce: 2, chainOnHit: 4, chainRange: 210, hitFx: true } },
     { id: 'a14', name: '冰冻炸弹', form: 'blast', cd: 1.4, dps: 231, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '范围内减速，敌人易伤',
       spec: { aoeSlow: 2.2, vuln: [0.25, 0.10] } },
     { id: 'a15', name: '毒气炸弹', form: 'blast', cd: 1.4, dps: 224, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '范围内持续扣血',
       spec: { dot: 0.85, dotT: 3.5 } },
-    { id: 'a16', name: '超载炸弹', form: 'blast', cd: 1.4, dps: 243, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '范围内麻痹并连锁五个敌人',
+    { id: 'a16', name: '超载炸弹', form: 'blast', cd: 1.4, dps: 243, effects: ['shock'], icon: '≶', color: '#ffe14d', brief: '范围内麻痹并连锁',
       spec: { para: 0.7, chainOnHit: 5, chainRange: 230 } },
-    { id: 'a17', name: '冰冻光线', form: 'ray', cd: 0.4, dps: 285, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '略粗的光束，减速并易伤',
+    { id: 'a17', name: '冰冻光线', form: 'ray', cd: 0.4, dps: 285, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '减速并易伤',
       spec: { width: 20, len: 640, aoeSlow: 1.4, vuln: [0.25, 0.10] } },
     { id: 'a18', name: '剧毒激光', form: 'ray', cd: 0.4, dps: 275, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '命中持续快速掉血',
       spec: { dot: 1.2, dotT: 3 } },
-    { id: 'a19', name: '电磁光束', form: 'ray', cd: 0.4, dps: 300, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '命中麻痹，传导周围五个敌人',
+    { id: 'a19', name: '电磁光束', form: 'ray', cd: 0.4, dps: 300, effects: ['shock'], icon: '≶', color: '#ffe14d', brief: '命中麻痹，传导周围敌人',
       spec: { para: 0.7, chainOnHit: 5, chainRange: 230 } },
     { id: 'a20', name: '冰冻追踪弹', form: 'seek', cd: 1.0, dps: 247, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '追踪命中冻结并易伤',
       spec: { speed: 430, freeze: 1.5, vuln: [0.35, 0.15], hitFx: true } },
     { id: 'a21', name: '剧毒追踪弹', form: 'seek', cd: 1.0, dps: 239, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '追踪命中持续快速扣血',
       spec: { speed: 430, dot: 1.1, dotT: 3 } },
-    { id: 'a22', name: '十万伏特', form: 'chain', cd: 1.0, dps: 700, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电流缓慢传导，麻痹沿途敌人',
+    { id: 'a22', name: '十万伏特', form: 'chain', cd: 1.0, dps: 700, effects: ['shock'], icon: '≶', color: '#ffe14d', brief: '麻痹沿途敌人',
       spec: {}, update: voltUpdate },
     { id: 'a23', name: '冰霜领域', form: 'crystal', cd: 1.0, dps: 300, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '身边减速圈，叠满冻结并易伤',
       spec: {}, aura: function (G, w, dt, def) {
@@ -415,13 +403,13 @@
       }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#7ad7ff'); } },
     { id: 'a24', name: '极寒病毒', form: 'crystal', cd: 1.0, dps: 330, effects: ['frost', 'venom'], icon: '❄', color: '#7ad7ff', brief: '易伤并持续扣血',
       spec: { vuln: [0.30, 0.15], dot: 0.8, dotT: 3, hitFx: true } },
-    { id: 'a25', name: '超导电流', form: 'chain', cd: 1.05, dps: 350, effects: ['frost', 'shock'], icon: '❄', color: '#9be8ff', brief: '淡蓝电弧，传导十个目标并易伤',
+    { id: 'a25', name: '超导电流', form: 'chain', cd: 1.05, dps: 350, effects: ['frost', 'shock'], icon: '❄', color: '#9be8ff', brief: '传导并易伤',
       spec: { jumps: 10, range: 300, vuln: [0.25, 0.10] } },
     { id: 'a26', name: '腐化弹', form: 'spore', cd: 0.95, dps: 320, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '减速持续扣血，消灭后留下毒区',
       spec: { dot: 0.8, dotT: 3, aoeSlow: 1.6 } },
-    { id: 'a27', name: '生物电流', form: 'chain', cd: 0.95, dps: 331, effects: ['venom', 'shock'], icon: '☣', color: '#9dff3c', brief: '绿色电弧，命中持续扣血',
+    { id: 'a27', name: '生物电流', form: 'chain', cd: 0.95, dps: 331, effects: ['venom', 'shock'], icon: '☣', color: '#9dff3c', brief: '命中持续扣血',
       spec: { dot: 0.75, dotT: 3 } },
-    { id: 'a28', name: '高压电弧', form: 'chain', cd: 1.1, dps: 340, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '命中传导三个敌人，可传导五次',
+    { id: 'a28', name: '高压电弧', form: 'chain', cd: 1.1, dps: 340, effects: ['shock'], icon: '≶', color: '#ffe14d', brief: '命中传导敌人',
       spec: { branchChain: [5, 3], para: 0.6 } }
   ];
 
@@ -449,53 +437,53 @@
   const S_DEFS = [
     { id: 's01', name: '金属风暴', form: 'pierce', cd: 0.38, dps: 3600, effects: [], icon: '✸', color: '#dfe6f2', brief: '螺旋向外的杀戮光环',
       spec: { shape: 'shuriken', r: 10, pierce: 99 } },
-    { id: 's02', name: '饱和轰炸', form: 'blast', cd: 1.2, dps: 2000, effects: [], icon: '◉', color: '#ff8a3d', brief: '大范围炸弹二次分裂五枚',
+    { id: 's02', name: '饱和轰炸', form: 'blast', cd: 1.2, dps: 2000, effects: [], icon: '◉', color: '#ff8a3d', brief: '大范围炸弹饱和轰炸',
       spec: { blastR: 150, blastGrow: 0.05 }, fire: bombVolley },
-    { id: 's03', name: '湮灭光束', form: 'ray', cd: 0.38, dps: 20000, effects: [], icon: '═', color: '#ff3ec8', brief: '双向激光绕身旋转扫射',
+    { id: 's03', name: '湮灭光束', form: 'ray', cd: 0.38, dps: 20000, effects: [], icon: '═', color: '#752cd4', brief: '湮灭光束绕身旋转扫射',
       spec: { width: 26, len: 640 } },
-    { id: 's04', name: '自动防御卫星', form: 'seek', cd: 0.44, dps: 2000, effects: [], icon: '◎', color: '#ffc93c', brief: '卫星群消解弹幕并炮击',
+    { id: 's04', name: '自动防御卫星', form: 'seek', cd: 0.44, dps: 2000, effects: [], icon: '◎', color: '#ff9100', brief: '卫星炮击群消解弹幕',
       spec: { hitBoom: 92, hitBoomMul: 0.55 }, update: satUpdate, drawFx: drawSats },
-    { id: 's05', name: '严冬', form: 'crystal', cd: 0.95, dps: 800, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '强化冰霜领域，范围与减速更强',
+    { id: 's05', name: '严冬', form: 'crystal', cd: 0.95, dps: 800, effects: ['frost'], icon: '❄', color: '#7ab8ff', brief: '冰霜领域，减速易伤',
       spec: {}, aura: function (G, w, dt, def) {
         fieldAura(G, w, dt, def, { r: 600, rGrow: 0.10, cycle: 5.3, vuln: 0.40, vulnGrow: 0.025, bossVuln: 0.25, slow: 1, dot: 0.5, dmgK: 0.6 });
-      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#7ad7ff'); } },
-    { id: 's06', name: '腐朽', form: 'spore', cd: 0.9, dps: 800, effects: [], icon: '✤', color: '#9dff3c', brief: '周身毒气领域，伤害随子弹组提升',
+      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#1d7bb9'); } },
+    { id: 's06', name: '腐朽', form: 'spore', cd: 0.9, dps: 800, effects: [], icon: '✤', color: '#28a333', brief: '腐化领域，伤害随子弹组提升',
       spec: {}, aura: function (G, w, dt, def) {
         fieldAura(G, w, dt, def, { r: 580, rGrow: 0.10, cycle: 99, vuln: 0, vulnGrow: 0, bossVuln: 0, slow: 0, dot: 1.5, dmgK: 0.7 });
-      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#9dff3c'); } },
-    { id: 's07', name: '天罚', form: 'chain', cd: 0.95, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '每秒落雷，传导麻痹并造成巨量伤害',
+      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#1ca317'); } },
+    { id: 's07', name: '天罚', form: 'chain', cd: 0.95, dps: 1600, effects: ['shock'], icon: '⋚', color: '#ffd500', brief: '召唤落雷',
       spec: {}, update: judgeUpdate, drawFx: null },
-    { id: 's08', name: '极寒病毒＋', form: 'crystal', cd: 0.95, dps: 2100, effects: ['frost', 'venom'], icon: '❄', color: '#7ad7ff', brief: '强化极寒病毒，易伤与剧毒更高',
+    { id: 's08', name: '极寒病毒＋', form: 'crystal', cd: 0.95, dps: 2100, effects: ['frost', 'venom'], icon: '❄', color: '#13a196', brief: '强化极寒病毒，易伤剧毒',
       spec: { r: 15, vuln: [0.42, 0.22], dot: 1.25, dotT: 3, hitFx: true, big: true, trail: '#7ad7ff' } },
-    { id: 's09', name: '超导电流＋', form: 'chain', cd: 0.95, dps: 2100, effects: ['frost', 'shock'], icon: '❄', color: '#9be8ff', brief: '强化超导电流，传导更远易伤更高',
+    { id: 's09', name: '超导电流＋', form: 'chain', cd: 0.95, dps: 2100, effects: ['frost', 'shock'], icon: '❄', color: '#38c0ff', brief: '强化超导电流，传导易伤',
       spec: { jumps: 14, range: 340, vuln: [0.35, 0.16], big: true } },
-    { id: 's10', name: '生物电流＋', form: 'spore', cd: 0.95, dps: 2100, effects: ['venom', 'shock'], icon: '☣', color: '#9dff3c', brief: '强化生物电流，剧毒更烈',
+    { id: 's10', name: '生物电流＋', form: 'spore', cd: 0.95, dps: 2100, effects: ['venom', 'shock'], icon: '☣', color: '#24b108', brief: '强化生物电流，传导剧毒',
       spec: { r: 15, dot: 1.2, dotT: 3, para: 0.5, big: true, trail: '#9dff3c' } },
-    { id: 's11', name: '霜刃', form: 'pierce', cd: 0.68, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰晶镖强化，命中直接冰封',
+    { id: 's11', name: '霜刃', form: 'pierce', cd: 0.68, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰晶镖强化，命中冰封',
       spec: { r: 14, pierce: 4, freeze: 2.0, hitFx: true, big: true, trail: '#7ad7ff' } },
-    { id: 's12', name: '毒刃', form: 'pierce', cd: 0.66, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '毒气镖强化，剧毒持续腐蚀',
+    { id: 's12', name: '毒刃', form: 'pierce', cd: 0.66, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '毒气镖强化，剧毒腐蚀',
       spec: { r: 14, pierce: 4, dot: 1.3, dotT: 3, big: true, trail: '#9dff3c' } },
-    { id: 's13', name: '雷刃', form: 'pierce', cd: 0.7, dps: 1400, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电弧镖强化，命中大面积连锁',
+    { id: 's13', name: '雷刃', form: 'pierce', cd: 0.7, dps: 1400, effects: ['shock'], icon: '⋚', color: '#ffe14d', brief: '电弧镖强化，大面积连锁',
       spec: { r: 14, pierce: 4, chainOnHit: 6, chainRange: 240, hitFx: true, big: true, trail: '#ffe14d' } },
-    { id: 's14', name: '霜爆', form: 'blast', cd: 1.4, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻炸弹强化，大范围减速易伤',
+    { id: 's14', name: '霜爆', form: 'blast', cd: 2, dps: 1000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻炸弹强化，范围减速易伤',
       spec: { blastR: 138, aoeSlow: 3, vuln: [0.35, 0.16], big: true, trail: '#7ad7ff' } },
-    { id: 's15', name: '毒爆', form: 'blast', cd: 1.36, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '毒气炸弹强化，范围剧毒',
+    { id: 's15', name: '毒爆', form: 'blast', cd: 2, dps: 800, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '毒气炸弹强化，范围剧毒',
       spec: { blastR: 138, dot: 1.15, dotT: 4, big: true, trail: '#9dff3c' } },
-    { id: 's16', name: '雷爆', form: 'blast', cd: 1.44, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '超载炸弹强化，麻痹连锁七敌',
+    { id: 's16', name: '雷爆', form: 'blast', cd: 2, dps: 800, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '超载炸弹强化，麻痹连锁',
       spec: { blastR: 138, para: 0.9, chainOnHit: 7, chainRange: 260, big: true, trail: '#ffe14d' } },
     { id: 's17', name: '寂寒冲', form: 'ray', cd: 0.46, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻光线强化，减速易伤更强',
       spec: { width: 34, len: 720, aoeSlow: 2, vuln: [0.35, 0.16], big: true } },
     { id: 's18', name: '死灵哀', form: 'ray', cd: 0.44, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '剧毒激光强化，极速掉血',
       spec: { width: 30, len: 720, dot: 1.6, dotT: 3, big: true } },
-    { id: 's19', name: '天明闪', form: 'ray', cd: 0.48, dps: 1400, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电磁光束强化，麻痹传导七敌',
+    { id: 's19', name: '天明闪', form: 'ray', cd: 0.48, dps: 1400, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '电磁光束强化，麻痹传导',
       spec: { width: 30, len: 720, para: 0.9, chainOnHit: 7, chainRange: 260, big: true } },
-    { id: 's20', name: '霜雪寻踪', form: 'seek', cd: 0.56, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻追踪弹强化，冻结并高额易伤',
+    { id: 's20', name: '霜雪寻踪', form: 'seek', cd: 0.56, dps: 2000, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '冰冻追踪弹强化，冻结易伤',
       spec: { r: 11, speed: 560, freeze: 2.0, vuln: [0.45, 0.22], hitFx: true, big: true, trail: '#7ad7ff' } },
-    { id: 's21', name: '基因锁定', form: 'seek', cd: 0.54, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '剧毒追踪弹强化，锁定即腐蚀',
+    { id: 's21', name: '基因锁定', form: 'seek', cd: 0.54, dps: 2000, effects: ['venom'], icon: '☣', color: '#9dff3c', brief: '剧毒追踪弹强化，锁定腐蚀',
       spec: { r: 11, speed: 560, dot: 1.45, dotT: 3, big: true, trail: '#9dff3c' } },
-    { id: 's22', name: '雷神锚点', form: 'seek', cd: 0.58, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '追踪麻痹并连锁七敌',
+    { id: 's22', name: '雷神锚点', form: 'seek', cd: 0.58, dps: 1600, effects: ['shock'], icon: '⚡', color: '#ffe14d', brief: '追踪麻痹连锁',
       spec: { r: 11, speed: 560, para: 0.9, chainOnHit: 7, chainRange: 250, big: true, trail: '#ffe14d' } },
-    { id: 's23', name: '混沌产物', form: 'spore', cd: 5, dps: 18000, effects: [], icon: '◍', color: '#9b6bff', brief: '黑洞牵引吞噬，范围随子弹组增长',
+    { id: 's23', name: '混沌产物', form: 'spore', cd: 5, dps: 4000, effects: [], icon: '◍', color: '#8046ff', brief: '黑洞吞噬',
       spec: {}, update: anomalyUpdate }
   ];
 

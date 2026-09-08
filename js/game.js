@@ -184,8 +184,6 @@
       this.finalSpawned = false;
       this.finalBoss = null;
       this.finalBossDown = false;
-      this.bosses = [];
-      this._bossSlots = null;
       this.endlessStart = 0;
       this.roarCd = 0;
       Enemies.reset();
@@ -565,7 +563,7 @@
       const B_IDS = Fusions.FORMS;
       ch += '<div class="cx-sec">';
       ch += '<div class="cx-h">B ＋ B → A<span class="cx-dim">' + M1.out.length +
-        ' 种 · 对角线＝同种合成</span></div>';
+        ' 种</span></div>';
       ch += '<div class="mx-wrap"><table class="mx">';
       ch += '<tr><th class="mx-cor">材料 ＼ 材料</th>';
       for (let j = 0; j < M1.size; j++) {
@@ -588,20 +586,12 @@
 
       ch += '<div class="cx-sec">';
       ch += '<div class="cx-h">A ＋ A → S<span class="cx-dim">' + Weapons.TIER3.length + ' 种</span></div>';
-      ch += '<ol class="rule-list">' +
-        '<li>形态与特效都有、且没有任一种凑到 2 颗 → <b>混沌产物</b></li>' +
-        '<li>全是形态 → <b>加强形态</b>（取最多的形态）</li>' +
-        '<li>全是特效 → 两种各 2 颗得 <b>效果对强化</b>，否则 <b>纯效果强化</b></li>' +
-        '<li>特效 ≥ 3 颗 → <b>纯效果强化</b>（取最多的特效）</li>' +
-        '<li>其余 → <b>形态 ＋ 特效</b>，形态为主</li>' +
-        '</ol></div>';
-
       const GROUPS = [
         ['B 阶 · 基础弹珠', Weapons.TIER1],
         ['A 阶', Weapons.TIER2],
         ['S 阶', Weapons.TIER3]
       ];
-      ch += '<div class="cx-sec"><div class="cx-h">弹珠图鉴<span class="cx-dim">点击展开</span></div>';
+      ch += '<div class="cx-sec"><div class="cx-h">弹珠图鉴<span class="cx-dim"></span></div>';
       for (const g of GROUPS) {
         ch += '<div class="cx-gh">' + g[0] + '</div><div class="cx-list">';
         for (const id of g[1]) {
@@ -782,7 +772,7 @@
       this.updateGems(dt);
       this.updateHeals(dt);
 
-      this.updateChests(dt);
+      this.updateChests();
 
       FX.update(dt);
 
@@ -1062,7 +1052,7 @@
       return false;
     },
 
-    updateChests(dt) {
+    updateChests() {
       const p = this.player;
       for (let i = this.chests.length - 1; i >= 0; i--) {
         const c = this.chests[i];
@@ -1451,11 +1441,6 @@
         statCard(this.weaponSummary(), '最终构筑');
 
       $('screenWin').classList.remove('hidden');
-    },
-
-    saveAndExit() {
-      $('screenWin').classList.add('hidden');
-      this.gameOver(true);
     },
 
     startEndless() {
@@ -1965,7 +1950,7 @@
         this.player.drawWeaponFx(ctx, this);
       }
 
-      Enemies.draw(ctx, this);
+      Enemies.draw(ctx);
       this.drawChests(ctx);
 
       if (this.player && this.state !== 'menu') {

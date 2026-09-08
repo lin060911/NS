@@ -1,8 +1,6 @@
 (function (global) {
   'use strict';
 
-  const U = global.U;
-  const FX = global.FX;
   const BAL = global.BAL;
   const TAU = Math.PI * 2;
 
@@ -50,7 +48,7 @@
   function addWeapon(id) {
     this.weapons.push({
       id: id, level: 1, t: 0,
-      data: {}, id2: this.weaponSeq++
+      id2: this.weaponSeq++
     });
   }
 
@@ -173,14 +171,6 @@
     ctx.restore();
   }
 
-  function hexToRgb(hex) {
-    const h = hex.replace('#', '');
-    const n = h.length === 3
-      ? [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)]
-      : [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-    return n.join(',');
-  }
-
   function drawWeaponFx(ctx, G) {
     const p = this;
     for (const w of p.weapons) {
@@ -206,7 +196,6 @@
   const Player = {
     baseStats: BASE,
     xpNeed: xpNeed,
-    METHODS: METHODS,
 
     create() {
       const p = {
@@ -223,7 +212,6 @@
         invuln: 0, hurtFlash: 0,
         facing: -Math.PI / 2,
         walk: 0,
-        alive: true,
         weapons: [],
         passives: Object.create(null),
         weaponSeq: 0,

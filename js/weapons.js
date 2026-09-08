@@ -35,7 +35,6 @@
   const Weapons = {
     bullets: [],
     clouds: [],
-    TIER_SCALE: TIER_SCALE,
 
     reset() { this.bullets.length = 0; this.clouds.length = 0; },
 
@@ -691,7 +690,6 @@
       tier: cfg.tier,
       index: cfg.index === undefined ? -1 : cfg.index,
       effectIds: ids,
-      effect: mainId || 'none',
       maxLevel: global.TIER_RANGE[cfg.tier].max,
       icon: cfg.icon || (mainId ? Effects.icon(mainId) : F.icon),
       color: tint(rawColor, FUSED_TINT[tier] || 0),
@@ -702,8 +700,6 @@
       tierName: cfg.tier === 1 ? 'B' : (cfg.tier === 2 ? 'A' : 'S'),
       custom: cfg.update || null,
       drawExtra: cfg.draw || (F.draw || null),
-
-      fx: function (lv) { return Weapons.effectList(this, lv); },
 
       stats: function (lv, P) {
         return Weapons.shapeStats(this, lv, P);
@@ -748,15 +744,15 @@
   const B_DEFS = [
     { id: 'pierce',  name: '飞镖弹',   form: 'pierce',  icon: '◆', cd: 1.2, dps: 100, color: '#c8d2e8', brief: '高速穿透',
       spec: { shape: 'bolt', speed: 780, r: 6 } },
-    { id: 'blast',   name: '爆破弹',   form: 'blast',   icon: '◉', cd: 2.2, dps: 80,  color: '#ff8a3d', brief: '范围爆炸',
+    { id: 'blast',   name: '爆破弹',   form: 'blast',   icon: '◉', cd: 2.2, dps: 80,  color: '#ff5a3d', brief: '范围爆炸',
       spec: { shape: 'orb' } },
     { id: 'ray',     name: '激光',     form: 'ray',     icon: '═', cd: 0.4, dps: 125, color: '#ff3ec8', brief: '光束贯穿' },
     { id: 'seek',    name: '追踪弹头', form: 'seek',    icon: '➤', cd: 1.0, dps: 90,  color: '#ffc93c', brief: '自动追踪',
       spec: { speed: 215 } },
-    { id: 'crystal', name: '雪花弹',   form: 'crystal', icon: '❖', cd: 1.5, dps: 120, color: '#7ad7ff', brief: '减速冻结',
+    { id: 'crystal', name: '雪花弹',   form: 'crystal', icon: '❖', cd: 1.5, dps: 120, color: '#5bceff', brief: '减速冻结',
       spec: { shape: 'snow', r: 9, hitFx: true } },
-    { id: 'spore',   name: '毒气弹',   form: 'spore',   icon: '✤', cd: 0.9, dps: 162, color: '#9dff3c', brief: '单体叠毒' },
-    { id: 'chain',   name: '电弧链',   form: 'chain',   icon: '⚡', cd: 1.2, dps: 88,  color: '#ffe14d', brief: '连锁感电' }
+    { id: 'spore',   name: '毒气弹',   form: 'spore',   icon: '✤', cd: 0.9, dps: 162, color: '#25ff66', brief: '单体叠毒' },
+    { id: 'chain',   name: '电弧链',   form: 'chain',   icon: '≶', cd: 1.2, dps: 88,  color: '#ffdd32', brief: '连锁感电' }
   ];
   for (const c of B_DEFS) {
     const F = global.FORMS[c.form];

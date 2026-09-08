@@ -99,14 +99,6 @@
 
   const Fusions = {
     FORMS: FORMS,
-    F_IDX: F_IDX,
-    E_IDX: E_IDX,
-    B2A: B2A,
-    A_PAIRS: A_PAIRS,
-
-    maxLv(tier) { return TIER_RANGE[tier].max; },
-    minLv(tier) { return TIER_RANGE[tier].min; },
-    def(id) { return Weapons.defs[id]; },
 
     preview(a, b) {
       if (!a || !b || a === b) return null;
@@ -136,8 +128,6 @@
         reason: A.name + ' Lv' + a.level + ' + ' + B.name + ' Lv' + b.level
       };
     },
-
-    canFuse(a, b) { return this.preview(a, b) !== null; },
 
     options(P) {
       const out = [];
@@ -213,18 +203,6 @@
         }
       }
       return out;
-    },
-
-    sStats() {
-      const n = Weapons.TIER2.length;
-      const map = {};
-      for (let i = 0; i < n; i++) {
-        for (let j = i; j < n; j++) {
-          const id = sRule(i, j);
-          map[id] = (map[id] || 0) + 1;
-        }
-      }
-      return map;
     }
   };
 

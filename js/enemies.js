@@ -326,7 +326,6 @@
   }
 
   const Enemies = {
-    TYPES: TYPES,
     list: [],
     bullets: [],
     grid: new Grid(72),
@@ -340,9 +339,6 @@
       this.grid.clear();
     },
 
-    HP_SCALE: HP_SCALE,
-    DMG_SCALE: DMG_SCALE,
-    BULLET_COLOR: BULLET_COLOR,
 
     diff(time, G) {
       const endless = G && G.endless;
@@ -436,7 +432,7 @@
         eliteSkill: U.pick(['cone', 'line', 'circle']),
         skillCd: U.rand(3.5, 6),
         casting: false,
-        burn: null, frozen: 0, frostStack: 0, slowT: 0,
+        burn: null, frozen: 0, frostStack: 0,
         venomStack: 0, venomT: 0,
         paralyze: 0, armorBreak: 0, armorBreakT: 0,
         phase2: false, dmgTaken: 0,
@@ -1048,7 +1044,7 @@
       return this.BOSS_KINDS.find((k) => k.id === e.kind) || null;
     },
 
-    bossAttack(G, e, T, dist) {
+    bossAttack(G, e, T) {
       if (e.phase2) return this.bossAttackP2(G, e, T);
 
       const hpR = e.hp / e.maxHp;
@@ -1121,10 +1117,10 @@
 
       const T = global.Telegraph;
 
-      if (e.isBoss) return this.bossAttack(G, e, T, dist);
+      if (e.isBoss) return this.bossAttack(G, e, T);
 
       e.casting = true;
-      const clear = (GG, c) => { e.casting = false; };
+      const clear = () => { e.casting = false; };
 
       if (e.eliteSkill === 'cone') {
         if (dist > 300) { e.skillCd = 0.6; e.casting = false; return; }
@@ -1327,7 +1323,7 @@
       }
     },
 
-    draw(ctx, G) {
+    draw(ctx) {
       const L = this.list;
       for (let i = 0; i < L.length; i++) {
         const e = L[i];

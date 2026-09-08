@@ -4,13 +4,12 @@
   const U = global.U;
 
   const P18 = (lv) => Math.pow(1.18, lv);
-  const P25 = (lv) => Math.pow(1.25, lv);
   const pct = (v) => '×' + v.toFixed(2);
   const rnd = (v) => Math.round(v);
 
   const PASSIVES = [
     {
-      id: 'power', name: '力量增幅', icon: '✦', color: '#ff4d6d', maxLevel: 5,
+      id: 'power', name: '力量增幅', icon: '✦', color: '#824dff', maxLevel: 5,
       brief: '提升所有弹珠造成的伤害',
       desc: function (lv) {
         return {
@@ -41,7 +40,7 @@
       }
     },
     {
-      id: 'expand', name: '扩散场', icon: '◯', color: '#9dff3c', maxLevel: 5,
+      id: 'expand', name: '巨型弹药', icon: '◯', color: '#9dff3c', maxLevel: 5,
       brief: '扩大所有弹珠的作用范围半径（爆炸 / 领域 / 光束）',
       desc: function (lv) {
         const f = (k) => '范围半径 <b>×' + (1 + k * 0.10).toFixed(2) + '</b>　（+' + k * 10 + '%）';
@@ -49,7 +48,7 @@
       }
     },
     {
-      id: 'crit', name: '幸运算法', icon: '✹', color: '#ffd23c', maxLevel: 5,
+      id: 'crit', name: '暴力算法', icon: '✹', color: '#ff3c3c', maxLevel: 5,
       brief: '提高暴击几率与暴击伤害',
       desc: function (lv) {
         const f = (k) => '暴击 <b>' + rnd(3 + k * 12) + '%</b> · 暴伤 <b>' + rnd(180 + k * 33) +
@@ -58,7 +57,7 @@
       }
     },
     {
-      id: 'plating', name: '装甲板', icon: '▣', color: '#ff7a3d', maxLevel: 5,
+      id: 'plating', name: '装甲插板', icon: '▣', color: '#ff7a3d', maxLevel: 5,
       brief: '提高生命上限，并立即回复等量生命',
       desc: function (lv) {
         const f = (k) => '生命上限 <b>+' + k * 15 + '</b>';
@@ -74,7 +73,7 @@
       }
     },
     {
-      id: 'thruster', name: '推进器', icon: '➹', color: '#7af0ff', maxLevel: 5,
+      id: 'thruster', name: '马赫推进', icon: '⋙', color: '#7af0ff', maxLevel: 5,
       brief: '提高移动速度',
       desc: function (lv) {
         const f = (k) => '移速 <b>×' + Math.pow(1.10, k).toFixed(2) + '</b>　（+' +
@@ -83,7 +82,7 @@
       }
     },
     {
-      id: 'magnet', name: '磁力场', icon: '◈', color: '#38f0ff', maxLevel: 5,
+      id: 'magnet', name: '数据磁场', icon: '◈', color: '#38f0ff', maxLevel: 5,
       brief: '扩大数据晶体的拾取范围',
       desc: function (lv) {
         const f = (k) => '拾取范围 <b>×' + Math.pow(1.25, k).toFixed(2) + '</b>';
@@ -104,23 +103,23 @@
 
     KIND_META: {
       new: {
-        kind: 'new', icon: '✧', color: '#9dff3c', cls: 't-new',
+        kind: 'new', icon: '✧', color: '#5ae484', cls: 't-new',
         title: '获取弹珠',
         sub: '三选一 · B 阶 · 可刷新一次',
         desc: '随机 3 颗 B 阶弹珠选 1 颗。' +
               '<b>同一种可重复持有</b> —— 两颗同种 B 阶才能合成对应 A 阶。'
       },
       up: {
-        kind: 'up', icon: '⇧', color: '#9b6bff', cls: 't-up',
+        kind: 'up', icon: '⇧', color: '#5d7ed8', cls: 't-up',
         title: '强化弹珠',
         sub: '三选一 · 提升 1 级',
-        desc: '已有弹珠升 1 级：伤害、范围、连锁同步成长，满级后不再出现。'
+        desc: '已有弹珠升 1 级：伤害成长'
       },
       passive: {
-        kind: 'passive', icon: '✦', color: '#38f0ff', cls: 't-up',
+        kind: 'passive', icon: '✦', color: '#df7563', cls: 't-up',
         title: '强化被动',
         sub: '三选一 · 提升 1 级',
-        desc: '强化角色本身：伤害、冷却、移速、生命、减伤，全场弹珠通用。'
+        desc: '强化角色本身：伤害、冷却、移速、生命、减伤，全场弹珠通用'
       }
     },
 
@@ -132,7 +131,7 @@
         const meta = this.KIND_META[k];
         let pool, badge = '', hint = '', reason = '';
         if (k === 'new') {
-          pool = slotsLeft > 0 ? this.newMarbles(G) : [];
+          pool = slotsLeft > 0 ? this.newMarbles() : [];
           badge = '候选 ' + Weapons.TIER1.length + ' 种 · 随机 ' + Math.min(3, Weapons.TIER1.length);
           hint = '还可持有 ' + Math.max(0, slotsLeft) + ' 枚（弹珠栏 ' +
             P.weapons.length + ' / ' + MAX_WEAPONS + '）';
@@ -160,7 +159,7 @@
       return this.kindInfo(G).filter(k => !k.disabled).map(k => k.kind);
     },
 
-    newMarbles(G) {
+    newMarbles() {
       return Weapons.TIER1.slice();
     },
 
@@ -190,7 +189,7 @@
 
       if (kind === 'new') {
         const P = G.player;
-        const cards = this.pickN(this.newMarbles(G), 3)
+        const cards = this.pickN(this.newMarbles(), 3)
           .map(id => makeNewCard(Weapons.defs[id], P));
         return { kind: 'new', cards: cards, canReroll: true };
       }
@@ -252,7 +251,6 @@
     return {
       kind: 'new', id: def.id, name: def.name, icon: def.icon, color: def.color,
       level: 1,
-      dup: !!own,
       tag: own ? 'B 阶 · 已有 Lv' + own.level + ' · 再获一枚' : 'B 阶 · 新弹珠',
       tagCls: 't-b',
       brief: def.brief,

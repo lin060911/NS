@@ -15,15 +15,15 @@
 
   const RESIDUAL = {
     frost: {
-      id: 'frost', name: '冰面', color: '#7ad7ff',
+      id: 'frost', name: '冰面', color: '#5ecfffb7',
       dpsMul: 0.18, slow: 0.45, slowT: 1.2
     },
     venom: {
-      id: 'venom', name: '毒云', color: '#9dff3c',
+      id: 'venom', name: '毒云', color: '#3cff56c2',
       dpsMul: 0.55, slow: 0, slowT: 0
     },
     shock: {
-      id: 'shock', name: '电场', color: '#ffe14d',
+      id: 'shock', name: '电场', color: '#f7d73acc',
       dpsMul: 0.32, slow: 0, slowT: 0, stun: 0.25
     }
   };
@@ -54,8 +54,7 @@
 
     pierce: {
       id: 'pierce', name: '飞镖弹', icon: '◆', effect: null,
-      baseDmg: 120, baseCd: 1.2,
-      brief: '高速直线贯穿，削减护甲',
+      brief: '直线贯穿',
       fire: function (G, w, s, DEF) {
         const p = G.player;
         const tgt = E().nearest(p.x, p.y, W().searchR(G));
@@ -81,8 +80,7 @@
 
     crystal: {
       id: 'crystal', name: '雪花弹', icon: '❖', effect: 'frost',
-      baseDmg: 120, baseCd: 1.0,
-      brief: '锁敌单体，减速并冻结',
+      brief: '减速冻结',
       solo: true,
       fire: function (G, w, s, DEF) {
         const p = G.player;
@@ -106,8 +104,7 @@
 
     blast: {
       id: 'blast', name: '爆破弹', icon: '◉', effect: null,
-      baseDmg: 120, baseCd: 1.5,
-      brief: '抛射爆炸，并在落点留下残留区域',
+      brief: '抛射爆炸',
       fire: function (G, w, s, DEF) {
         const p = G.player;
         const tgt = E().nearest(p.x, p.y, W().searchR(G));
@@ -137,8 +134,7 @@
 
     spore: {
       id: 'spore', name: '毒气弹', icon: '✤', effect: 'venom',
-      baseDmg: 146, baseCd: 0.9,
-      brief: '命中叠毒，单体持续腐蚀',
+      brief: '叠毒腐蚀',
       solo: true,
       fire: function (G, w, s, DEF) {
         const p = G.player;
@@ -162,9 +158,8 @@
     },
 
     chain: {
-      id: 'chain', name: '电弧链', icon: '⚡', effect: 'shock',
-      baseDmg: 60, baseCd: 1.4, shots: 3,
-      brief: '瞬发电弧跳跃，麻痹并传导',
+      id: 'chain', name: '电弧链', icon: '≶', effect: 'shock',
+      brief: '电弧传导',
       fire: function (G, w, s, DEF) {
         const p = G.player;
         const n = W().shotCount(s.count || 1);
@@ -198,8 +193,7 @@
 
     seek: {
       id: 'seek', name: '追踪弹头', icon: '➤', effect: null,
-      baseDmg: 130, baseCd: 1.1,
-      brief: '自动索敌，标记目标使其易伤',
+      brief: '索敌标记',
       fire: function (G, w, s, DEF) {
         const p = G.player;
         if (!E().nearest(p.x, p.y, W().searchR(G) * 1.5)) return;
@@ -225,8 +219,7 @@
 
     ray: {
       id: 'ray', name: '激光', icon: '═', effect: null,
-      baseDmg: 25, baseCd: 0.25,
-      brief: '高频贯穿射线，持续照射伤害递增',
+      brief: '贯穿射线',
       fire: function (G, w, s, DEF) {
         const p = G.player;
         const tgt = E().nearest(p.x, p.y, W().searchR(G) * 1.2);
