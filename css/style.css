@@ -14,7 +14,19 @@
   --txt: #fafafa;
   --dim: #91a6c2;
   --shadow: 0 18px 40px -22px rgba(0, 0, 0, .95);
-  --r: 8px;
+  --r: 16px;
+
+  /* ── 按钮彩通 ── */
+  --c-cyan: #39deff;
+  --c-teal: #2ee6c0;
+  --c-blue: #5b8cff;
+  --c-violet: #a07bff;
+  --c-pink: #e753a5;
+  --c-rose: #ff5c7a;
+  --c-orange: #ff8a3d;
+  --c-amber: #ffb169;
+  --c-lime: #b6f081;
+  --c-green: #4ade80;
 
   --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 }
@@ -181,34 +193,128 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .howto b { color: #fff; font-weight: 600; }
 .howto b.danger, .howto strong.danger { color: #c49aad; }
 
+/* ── 按钮 · 彩色体系（改配色只需覆写 --bg1/--bg2/--bc/--fg/--gl/--ac） ── */
 .btn {
+  /* 默认：靛蓝描边款 */
+  --bg1: rgba(91, 140, 255, .20);
+  --bg2: rgba(91, 140, 255, .05);
+  --bc: rgba(91, 140, 255, .42);
+  --bch: var(--c-blue);
+  --fg: #d3deff;
+  --gl: rgba(91, 140, 255, .55);
+  --ac: var(--c-blue);
+
   display: block; width: 100%; margin-top: 10px;
   padding: 13px 18px; font-size: 14px; font-weight: 600; letter-spacing: 1.5px;
-  border: 1px solid transparent; border-radius: 2px; cursor: pointer;
+  border: 1px solid var(--bc); border-radius: 2px; cursor: pointer;
   font-family: inherit;
-  transition: background .16s, border-color .16s, filter .12s;
+  color: var(--fg);
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  box-shadow:
+    inset 3px 0 0 var(--ac),
+    inset 0 1px 0 rgba(255, 255, 255, .08),
+    0 10px 24px -16px var(--gl);
+  transition: transform .14s, box-shadow .18s, border-color .16s, filter .12s, color .16s;
 }
-.btn.primary { color: #0b1113; background: var(--cyan); }
-.btn.primary:hover { background: #82b6c0; }
-.btn.ghost {
-  color: #cbd4e3; background: rgba(255, 255, 255, .04);
-  border-color: var(--line2);
+.btn:hover {
+  filter: brightness(1.18) saturate(1.08);
+  border-color: var(--bch);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 3px 0 0 var(--ac),
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    0 14px 26px -12px var(--gl);
 }
-.btn.ghost:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.btn:active { transform: translateY(0); filter: brightness(.92); }
+.btn:focus-visible { outline: 2px solid var(--bch); outline-offset: 2px; }
 .btn.small { padding: 8px 16px; font-size: 12px; letter-spacing: .5px; width: auto; border-radius: 2px; }
-.btn:active { filter: brightness(.88); }
-.btn.danger {
-  border-color: rgba(176, 125, 153, .38);
-  background: rgba(176, 125, 153, .12);
-  color: #c9a7b8;
+
+/* 实心·青（主行动） */
+.btn.primary {
+  --bg1: #4ce4ff; --bg2: #12c3c9;
+  --bc: #7feaff; --bch: #e2fdff;
+  --fg: #052028; --gl: rgba(57, 222, 255, .6);
+  --ac: rgba(255, 255, 255, .55);
 }
-.btn.danger:hover { background: rgba(176, 125, 153, .2); }
+/* 实心·橙（领主挑战） */
 .btn.rush {
-  background: rgba(255, 138, 61, .12);
-  border-color: rgba(255, 138, 61, .4);
-  color: #cfa079;
+  --bg1: #ffae5c; --bg2: #ff5f4d;
+  --bc: #ffbb8c; --bch: #ffe2cf;
+  --fg: #3d1405; --gl: rgba(255, 122, 61, .6);
+  --ac: rgba(255, 255, 255, .5);
 }
-.btn.rush:hover { background: rgba(255, 138, 61, .2); }
+/* 描边·玫红（危险 / 放弃） */
+.btn.danger {
+  --bg1: rgba(255, 92, 122, .20); --bg2: rgba(255, 92, 122, .05);
+  --bc: rgba(255, 92, 122, .45); --bch: var(--c-rose);
+  --fg: #ffc6d0; --gl: rgba(255, 92, 122, .55);
+  --ac: var(--c-rose);
+}
+/* 描边·靛蓝（默认幽灵款） */
+.btn.ghost {
+  --bg1: rgba(91, 140, 255, .20); --bg2: rgba(91, 140, 255, .05);
+  --bc: rgba(91, 140, 255, .42); --bch: var(--c-blue);
+  --fg: #d3deff; --gl: rgba(91, 140, 255, .55);
+  --ac: var(--c-blue);
+}
+
+/* ── 逐按钮配色 ── */
+#btnNewGame { /* 实心青 */
+  --bg1: #4ce4ff; --bg2: #12c3c9;
+  --bc: #7feaff; --bch: #e2fdff; --fg: #052028;
+  --gl: rgba(57, 222, 255, .6); --ac: rgba(255, 255, 255, .55);
+}
+#btnBossRush { /* 实心橙 */
+  --bg1: #ffae5c; --bg2: #ff5f4d;
+  --bc: #ffbb8c; --bch: #ffe2cf; --fg: #3d1405;
+  --gl: rgba(255, 122, 61, .6); --ac: rgba(255, 255, 255, .5);
+}
+#btnSaves, #btnSavesManage { /* 紫罗兰 */
+  --bg1: rgba(160, 123, 255, .22); --bg2: rgba(160, 123, 255, .05);
+  --bc: rgba(160, 123, 255, .45); --bch: var(--c-violet);
+  --fg: #ddccff; --gl: rgba(160, 123, 255, .55); --ac: var(--c-violet);
+}
+#btnHow, #btnLoadout, #btnBackKind,
+#btnTabBack { /* 青绿 */
+  --bg1: rgba(46, 230, 192, .20); --bg2: rgba(46, 230, 192, .05);
+  --bc: rgba(46, 230, 192, .42); --bch: var(--c-teal);
+  --fg: #c2f7ea; --gl: rgba(46, 230, 192, .5); --ac: var(--c-teal);
+}
+#btnQuit, #btnWinEndless { /* 玫红 */
+  --bg1: rgba(255, 92, 122, .22); --bg2: rgba(255, 92, 122, .05);
+  --bc: rgba(255, 92, 122, .48); --bch: var(--c-rose);
+  --fg: #ffc6d0; --gl: rgba(255, 92, 122, .6); --ac: var(--c-rose);
+}
+#btnWinSave, #btnSaveNameOk, #btnAgain { /* 实心绿 */
+  --bg1: #96f2ab; --bg2: #2fd47a;
+  --bc: #a9f6ba; --bch: #dcffe6; --fg: #052b16;
+  --gl: rgba(74, 222, 128, .55); --ac: rgba(255, 255, 255, .5);
+}
+#btnFuse { /* 实心紫 */
+  --bg1: #c9a0ff; --bg2: #7a4dff;
+  --bc: #d3aeff; --bch: #efe4ff; --fg: #170a33;
+  --gl: rgba(155, 107, 255, .6); --ac: rgba(255, 255, 255, .5);
+}
+#btnFuseSkip, #btnChestSkip, #btnSaveNameSkip, #btnReroll { /* 琥珀 */
+  --bg1: rgba(255, 177, 105, .20); --bg2: rgba(255, 177, 105, .05);
+  --bc: rgba(255, 177, 105, .45); --bch: var(--c-amber);
+  --fg: #ffe1c0; --gl: rgba(255, 177, 105, .5); --ac: var(--c-amber);
+}
+#btnMenu, #btnWinMenu { /* 靛蓝描边 */
+  --bg1: rgba(91, 140, 255, .22); --bg2: rgba(91, 140, 255, .05);
+  --bc: rgba(91, 140, 255, .45); --bch: var(--c-blue);
+  --fg: #d3deff; --gl: rgba(91, 140, 255, .55); --ac: var(--c-blue);
+}
+#btnHowBack, #btnLoadoutClose, #btnSavesBack { /* 实心蓝（返回类主行动） */
+  --bg1: #86aeff; --bg2: #3f6ddb;
+  --bc: #a8c4ff; --bch: #e6efff; --fg: #071634;
+  --gl: rgba(91, 140, 255, .6); --ac: rgba(255, 255, 255, .5);
+}
+#btnResume { /* 实心青（继续） */
+  --bg1: #4ce4ff; --bg2: #12c3c9;
+  --bc: #7feaff; --bch: #e2fdff; --fg: #052028;
+  --gl: rgba(57, 222, 255, .6); --ac: rgba(255, 255, 255, .55);
+}
 
 #screenLevel { align-items: center; }
 .level-wrap { width: min(96vw, 880px); text-align: center; }
@@ -308,6 +414,23 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .pause-stats { font-size: 13px; line-height: 2; color: var(--dim); margin-bottom: 16px; }
 .pause-stats b { color: #fff; font-weight: 600; }
 
+/* ── 屏幕暂停按钮（触屏设备） ─────────────── */
+.pause-btn {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  display: none; pointer-events: auto;
+  width: 38px; height: 38px; padding: 0;
+  align-items: center; justify-content: center;
+  border-radius: 2px;
+  background: rgba(14, 15, 19, .8);
+  border: 1px solid var(--line2);
+  color: #dbe2ef; font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+  backdrop-filter: blur(6px);
+  cursor: pointer; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.pause-btn:active { filter: brightness(1.3); transform: translateX(-50%) scale(.94); }
+@media (pointer: coarse) { .pause-btn { display: flex; } }
+
 /* ── 技能栏 ─────────────────────────────── */
 .skill-bar {
   position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
@@ -320,7 +443,19 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   border: 1px solid var(--line);
   backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
-  transition: border-color .16s, box-shadow .16s;
+  transition: border-color .16s, box-shadow .16s, transform .1s;
+  /* 允许点击 / 点按释放技能（#hud 整体是 pointer-events:none） */
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.skill.tappable:active { transform: scale(.92); filter: brightness(1.25); }
+.skill.nope { animation: skNope .28s ease; }
+@keyframes skNope {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
 }
 .skill.ready { border-color: var(--cyan); background: rgba(111, 169, 180, .14); }
 .skill.ready .sk-icon { opacity: 1; }
@@ -425,13 +560,33 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .pause-panel { width: min(96vw, 860px); }
 .tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
 .tab {
+  --tc: #9fb2cc;
+  --tb: rgba(159, 178, 204, .12);
+  --tl: rgba(159, 178, 204, .45);
+  display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 15px; font-size: 12px; font-family: inherit; cursor: pointer;
   border-radius: 2px; border: 1px solid var(--line);
-  background: rgba(255, 255, 255, .03); color: var(--dim);
-  transition: background .16s, color .16s, border-color .16s;
+  background: rgba(255, 255, 255, .03); color: var(--tc);
+  transition: background .16s, color .16s, border-color .16s, box-shadow .16s;
 }
-.tab:hover { color: #fff; }
-.tab.active { background: rgba(111, 169, 180, .14); border-color: rgba(111, 169, 180, .55); color: #fff; }
+.tab::before {
+  content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--tc); opacity: .6; transition: opacity .16s;
+}
+.tab:hover { color: #fff; background: var(--tb); border-color: var(--tl); }
+.tab:hover::before { opacity: 1; }
+.tab.active {
+  color: #fff; background: var(--tb); border-color: var(--tc);
+  box-shadow: inset 0 -2px 0 var(--tc), 0 6px 16px -12px var(--tc);
+}
+.tab.active::before { opacity: 1; box-shadow: 0 0 7px var(--tc); }
+
+#btn-tabStatus  { --tc: var(--c-cyan);   --tb: rgba(57, 222, 255, .14);  --tl: rgba(57, 222, 255, .5); }
+#btn-tabKeys    { --tc: var(--c-blue);   --tb: rgba(91, 140, 255, .14);  --tl: rgba(91, 140, 255, .5); }
+#btn-tabRules   { --tc: var(--c-amber);  --tb: rgba(255, 177, 105, .14); --tl: rgba(255, 177, 105, .5); }
+#btn-tabBuild   { --tc: var(--c-violet); --tb: rgba(160, 123, 255, .16); --tl: rgba(160, 123, 255, .5); }
+#btn-tabSkills  { --tc: var(--c-pink);   --tb: rgba(231, 83, 165, .14);  --tl: rgba(231, 83, 165, .5); }
+#btn-tabCodex   { --tc: var(--c-teal);   --tb: rgba(46, 230, 192, .14);  --tl: rgba(46, 230, 192, .5); }
 .tabpane {
   min-height: 200px; max-height: 60vh; overflow-y: auto;
   text-align: left; margin-bottom: 16px; padding-right: 8px;
@@ -485,12 +640,23 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .sv-act { display: flex; gap: 6px; margin-top: 8px; }
 .sv-act button {
   flex: 1; padding: 5px 6px; font-size: 10.5px; font-family: inherit;
-  color: #9aa4b7; background: rgba(0, 0, 0, .22);
-  border: 1px solid var(--line2); border-radius: 2px; cursor: pointer;
-  transition: color .15s, border-color .15s;
+  color: #cfdcff; border-radius: 2px; cursor: pointer;
+  background: linear-gradient(135deg, rgba(91, 140, 255, .20), rgba(91, 140, 255, .04));
+  border: 1px solid rgba(91, 140, 255, .4);
+  transition: color .15s, border-color .15s, background .15s, filter .12s;
 }
-.sv-act button:hover { color: #fff; border-color: var(--cyan); }
-.sv-act button.del:hover { color: #cf7a80; border-color: #cf7a80; }
+.sv-act button:hover {
+  color: #fff; border-color: var(--c-blue); filter: brightness(1.2);
+}
+.sv-act button.del {
+  color: #ffc6d0;
+  background: linear-gradient(135deg, rgba(255, 92, 122, .20), rgba(255, 92, 122, .04));
+  border-color: rgba(255, 92, 122, .4);
+}
+.sv-act button.del:hover {
+  color: #fff; border-color: var(--c-rose);
+  background: linear-gradient(135deg, rgba(255, 92, 122, .32), rgba(255, 92, 122, .08));
+}
 
 .saves-box { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
 .sv-empty {
@@ -664,9 +830,11 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   .card { min-height: 148px; padding: 15px 13px; }
   .timer { font-size: 21px; }
   .bars { width: 48vw; }
-  .skill-bar { right: 10px; gap: 8px; }
-  .skill { width: 46px; height: 46px; }
-  .sk-icon { font-size: 18px; }
+  .skill-bar { right: 10px; gap: 10px; }
+  .skill { width: 54px; height: 54px; }
+  .sk-icon { font-size: 19px; }
+  .sk-name { font-size: 8px; }
+  .sk-key { font-size: 8.5px; }
   .tab { padding: 6px 11px; font-size: 11px; }
   .fusion-slots { gap: 6px; }
   .fop { font-size: 13px; }

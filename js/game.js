@@ -123,15 +123,15 @@
       $('btnHow').onclick = () => { Sfx.play('ui'); $('screenMenu').classList.add('hidden'); $('screenHow').classList.remove('hidden'); };
       $('btnHowBack').onclick = () => { Sfx.play('ui'); $('screenHow').classList.add('hidden'); $('screenMenu').classList.remove('hidden'); };
       $('btnResume').onclick = () => { Sfx.play('ui'); this.resume(); };
+      const bp = $('btnPauseHud');
+      if (bp) bp.onclick = () => {
+        Sfx.init(); Sfx.play('ui');
+        if (this.state === 'playing') this.pause();
+        else if (this.state === 'pause') this.resume();
+      };
       $('btnQuit').onclick = () => { Sfx.play('ui'); this.gameOver(false); };
       $('btnAgain').onclick = () => { Sfx.play('ui'); this.start(this.mode || 'story'); };
-      $('btnMenu').onclick = () => {
-        $('screenOver').classList.add('hidden');
-        $('hud').classList.add('hidden');
-        $('screenMenu').classList.remove('hidden');
-        this.state = 'menu';
-        this.showBest();
-      };
+      $('btnMenu').onclick = () => { Sfx.play('ui'); this.backToMenu(); };
       $('btnWinSave').onclick = () => { Sfx.play('ui'); this.openSaveName(); };
       $('btnWinEndless').onclick = () => { Sfx.play('ui'); this.startEndless(); };
       $('btnFuse').onclick = () => this.confirmFusion();
@@ -1426,6 +1426,7 @@
       if (this.state !== 'playing') return;
       this.state = 'win';
       this.finalBossDown = true;
+      this.hideAllScreens();
       const p = this.player;
 
       Sfx.play('win');
@@ -1643,6 +1644,7 @@
     gameOver(win) {
       if (this.state === 'over') return;
       this.state = 'over';
+      this.hideAllScreens();
       const p = this.player;
       Sfx.play(win ? 'win' : 'lose');
 
@@ -1795,6 +1797,75 @@
       }
     },
 
+    isTouch() {
+      return (global.matchMedia && global.matchMedia('(pointer: coarse)').matches) ||
+        ('ontouchstart' in global);
+    },
+
+    slotLabel(i) { return this.isTouch() ? '点击' : Abilities.slotKey(i); },
+
+    bindSkillTap(el, fn) {
+      if (!el) return;
+      el.classList.add('tappable');
+      const fire = (ev) => {
+        if (ev && ev.cancelable) ev.preventDefault();
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        Sfx.init();
+        Sfx.play('ui');
+        fn();
+      };
+      if (global.PointerEvent) {
+        el.addEventListener('pointerdown', fire);
+      } else {
+        el.addEventListener('touchstart', fire, { passive: false });
+        el.addEventListener('mousedown', fire);
+      }
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+    },
+
+    nudgeSkill(el) {
+      if (!el) return;
+      el.classList.remove('nope');
+      void el.offsetWidth;
+      el.classList.add('nope');
+    },
+
+    castSlot(i) {
+      if (this.state !== 'playing') return false;
+      const p = this.player;
+      const id = Abilities.loadout[i];
+      if (!id) {
+        const spare = Abilities.unlocked(p).filter((x) => !Abilities.equipped(x));
+        if (spare.length) {
+          this.pause();
+          this.switchTab('tabSkills');
+          this.toast('装 配 技 能 后 可 点 击 释 放');
+        } else {
+          this.toast('需 S 阶 弹 珠 解 锁 大 招');
+        }
+        return false;
+      }
+      const def = Abilities.defs[id];
+      if (!Abilities.ready(id)) {
+        this.nudgeSkill($('sk-' + i));
+        this.toast(def.name + ' 冷 却 ' + Math.ceil(Abilities.cd[id]) + 's');
+        return false;
+      }
+      return Abilities.useSlot(this, i);
+    },
+
+    castRoar() {
+      if (this.state !== 'playing') return false;
+      const p = this.player;
+      if (!p.blessing || !p.blessing.roar) return false;
+      if (this.roarCd > 0) {
+        this.nudgeSkill($('sk-roar'));
+        this.toast('咆 哮 冷 却 ' + Math.ceil(this.roarCd) + 's');
+        return false;
+      }
+      return this.useRoar();
+    },
+
     buildSkillBar() {
       const bar = $('skillBar');
       if (!bar) return;
@@ -1807,7 +1878,7 @@
         if (!id) {
           el.innerHTML =
             '<div class="sk-icon dim">·</div>' +
-            '<div class="sk-key">' + Abilities.slotKey(i) + '</div>' +
+            '<div class="sk-key">' + this.slotLabel(i) + '</div>' +
             '<div class="sk-name">未装配</div>';
         } else {
           const def = Abilities.defs[id];
@@ -1815,9 +1886,10 @@
             '<div class="sk-cd"><div class="sk-fill"></div></div>' +
             '<div class="sk-cdnum"></div>' +
             '<div class="sk-icon" style="color:' + def.color + '">' + def.icon + '</div>' +
-            '<div class="sk-key">' + Abilities.slotKey(i) + '</div>' +
+            '<div class="sk-key">' + this.slotLabel(i) + '</div>' +
             '<div class="sk-name">' + def.name + '</div>';
         }
+        this.bindSkillTap(el, () => this.castSlot(i));
         bar.appendChild(el);
       }
       const p = this.player;
@@ -1832,6 +1904,7 @@
           '<div class="sk-icon" style="color:' + b.color + '">' + b.icon + '</div>' +
           '<div class="sk-key">R</div>' +
           '<div class="sk-name">' + b.name + '</div>';
+        this.bindSkillTap(el, () => this.castRoar());
         bar.appendChild(el);
       }
     },
@@ -1863,7 +1936,7 @@
         const el = $('sk-' + i);
         if (!el || !id) continue;
         const def = Abilities.defs[id];
-        this.paintSkill(el, Abilities.cd[id] || 0, def.cd, Abilities.slotKey(i));
+        this.paintSkill(el, Abilities.cd[id] || 0, def.cd, this.slotLabel(i));
       }
       const p = this.player;
       const rel = $('sk-roar');
