@@ -30,7 +30,7 @@
     if (ps.split) p.amount += ps.split;
     if (ps.thruster) p.speed *= Math.pow(1.10, ps.thruster);
     if (ps.plating) p.maxHpBase += 15 * ps.plating;
-    if (ps.nano) p.regen += p.maxHpBase * 0.003 * ps.nano;
+    if (ps.nano) p.regen += p.maxHpBase * 0.0015 * ps.nano;
     if (ps.crit) { p.critChance += 0.12 * ps.crit; p.critMul += 0.33 * ps.crit; }
     if (ps.magnet) p.pickup *= Math.pow(1.25, ps.magnet);
 
@@ -64,7 +64,8 @@
     if (ups > 0) {
       const before = this.maxHp;
       this.recalc();
-      if (this.maxHp > before) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp - before));
+      /* 升级带来的生命上限提升只补一半，避免"升级即回血" */
+      if (this.maxHp > before) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp - before) * 0.5);
     }
     return ups;
   }

@@ -163,7 +163,7 @@
       fire: function (G, w, s, DEF) {
         const p = G.player;
         const n = W().shotCount(s.count || 1);
-        let first = E().nearest(p.x, p.y, s.range || W().searchR(G));
+        let first = E().nearest(p.x, p.y, Math.min(s.range || W().searchR(G), W().searchR(G)));
         if (!first) return;
         global.Sfx.play('chain');
         for (let c = 0; c < n && first; c++) {
@@ -185,7 +185,7 @@
             cx = cur.x; cy = cur.y;
             cur = E().nearest(cx, cy, (s.range || 250) * 0.8, hit);
           }
-          first = E().nearest(p.x, p.y, s.range || W().searchR(G), hit);
+          first = E().nearest(p.x, p.y, Math.min(s.range || W().searchR(G), W().searchR(G)), hit);
         }
         global.FX.addShake(1.2);
       }
@@ -196,7 +196,7 @@
       brief: '索敌标记',
       fire: function (G, w, s, DEF) {
         const p = G.player;
-        if (!E().nearest(p.x, p.y, W().searchR(G) * 1.5)) return;
+        if (!E().nearest(p.x, p.y, W().searchR(G))) return;
         const n = W().shotCount(s.count || 1);
         for (let i = 0; i < n; i++) {
           const a = Math.random() * TAU;
@@ -222,7 +222,7 @@
       brief: '贯穿射线',
       fire: function (G, w, s, DEF) {
         const p = G.player;
-        const tgt = E().nearest(p.x, p.y, W().searchR(G) * 1.2);
+        const tgt = E().nearest(p.x, p.y, W().searchR(G));
         if (!tgt) return;
         const a = U.angle(p.x, p.y, tgt.x, tgt.y);
         const n = W().shotCount(s.count || 1);

@@ -13,6 +13,10 @@
   const K = 0.5505;
   const TIER_SCALE = { 1: K, 2: K * 0.568, 3: K * 0.1406 };
 
+  /* 统一索敌半径：所有「发射型」武器只在 400px 内锁定目标。
+     领域 / 光环类（fieldAura、卫星环绕等）走自己的作用半径，不受此限制。 */
+  const SEARCH_R = 600;
+
   function hexRgb(hex) {
     const h = String(hex).replace('#', '');
     const s = h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h;
@@ -38,7 +42,12 @@
 
     reset() { this.bullets.length = 0; this.clouds.length = 0; },
 
-    searchR(G) { return Math.max(G.w, G.h) * 0.72; },
+    SEARCH_R: SEARCH_R,
+
+    searchR() { return SEARCH_R; },
+
+    /* 领域 / 光环类专用：这类武器不依赖索敌，保留自身作用半径 */
+    auraR(r) { return r; },
 
     shotCount(c) {
       return Math.max(1, Math.round(c || 1));
@@ -222,8 +231,8 @@
         effects: b.effects
       });
       Effects.onHit(G, e, b.effects, final);
-      if (Math.random() < 0.5) {
-        FX.burst(e.x, e.y, b.color, 3, { speed: 70, life: 0.24, size: 1.8 });
+      if (Math.random() < 0.28) {
+        FX.burst(e.x, e.y, b.color, 2, { speed: 70, life: 0.24, size: 1.8 });
       }
       return e.hp <= 0;
     },
@@ -246,7 +255,7 @@
       }
       global.Sfx.play('explode');
       FX.ring(x, y, color, radius * 0.25, radius, 0.34, 4);
-      FX.burst(x, y, color, 12, { speed: 200, life: 0.4, size: 2.6 });
+      FX.burst(x, y, color, 8, { speed: 200, life: 0.4, size: 2.6 });
       FX.addShake(1.6);
     },
 
@@ -296,7 +305,7 @@
         const c = C[i];
         c.t += dt;
         if (c.t >= c.life) { C.splice(i, 1); continue; }
-        if (Math.random() < dt * 6) {
+        if (Math.random() < dt * 2.5) {
           FX.burst(c.x + (Math.random() - 0.5) * c.r, c.y + (Math.random() - 0.5) * c.r,
             c.color || '#9dff3c', 1, { speed: 16, life: 0.6, size: 2.4 });
         }
@@ -395,8 +404,8 @@
             b.vx = Math.cos(na) * b.speed;
             b.vy = Math.sin(na) * b.speed;
           }
-          if (Math.random() < 0.7) {
-            FX.burst(b.x, b.y, b.color, 1, { speed: 22, life: 0.3, size: 2.2, drag: 4 });
+          if (Math.random() < 0.2) {
+            FX.burst(b.x, b.y, b.color, 1, { speed: 22, life: 0.28, size: 2, drag: 4 });
           }
         }
 
@@ -413,7 +422,7 @@
               b.color, 18, b.effects, b.spec);
           }
         }
-        if (b.trail && Math.random() < 0.85) {
+        if (b.trail && Math.random() < 0.32) {
           FX.burst(b.x, b.y, b.trail, 1,
             { speed: b.trail === '#ff5a2d' ? 60 : 26, life: b.trail === '#ff5a2d' ? 0.36 : 0.28, size: b.trail === '#ff5a2d' ? 3 : 2.2, drag: 3 });
         }
@@ -497,10 +506,11 @@
       const B = this.bullets;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
+      const blur = FX.quality > 0.6;
       for (let i = 0; i < B.length; i++) {
         const b = B[i];
-        ctx.shadowColor = b.color;
-        ctx.shadowBlur = 14;
+        if (blur) { ctx.shadowColor = b.color; ctx.shadowBlur = 10; }
+        else ctx.shadowBlur = 0;
 
         if (b.type === 'beam') {
           const t = b.life / b.max;
@@ -530,7 +540,7 @@
         const sh = b.shape || b.type;
         const big = b.spec && b.spec.big;
         if (big) {
-          ctx.shadowBlur = 30;
+          ctx.shadowBlur = blur ? 30 : 0;
           ctx.globalAlpha = 0.3;
           ctx.beginPath();
           ctx.arc(0, 0, b.r * 2.7, 0, TAU);
@@ -539,7 +549,7 @@
         }
 
         if (sh === 'bolt') {
-          ctx.shadowBlur = 16;
+          ctx.shadowBlur = blur ? 16 : 0;
           ctx.beginPath();
           ctx.moveTo(b.r * 2.5, 0);
           ctx.lineTo(b.r * 0.1, b.r * 0.72);
@@ -557,7 +567,7 @@
           ctx.closePath();
           ctx.fill();
         } else if (sh === 'shuriken') {
-          ctx.shadowBlur = 16;
+          ctx.shadowBlur = blur ? 16 : 0;
           const R = b.r * 1.7, r2 = b.r * 0.62;
           ctx.beginPath();
           for (let k = 0; k < 4; k++) {
@@ -576,7 +586,7 @@
           ctx.fillStyle = '#fff';
           ctx.beginPath(); ctx.arc(0, 0, b.r * 0.2, 0, TAU); ctx.fill();
         } else if (sh === 'snow') {
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = blur ? 18 : 0;
           ctx.strokeStyle = b.color;
           ctx.lineWidth = Math.max(1.6, b.r * 0.3);
           ctx.lineCap = 'round';
@@ -621,7 +631,7 @@
           ctx.fillStyle = '#fff';
           ctx.beginPath(); ctx.arc(b.r * 0.55, 0, b.r * 0.3, 0, TAU); ctx.fill();
         } else if (b.type === 'crystal') {
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = blur ? 18 : 0;
           U.poly(ctx, 0, 0, b.r * 1.3, 6, 0);
           ctx.fill();
           ctx.fillStyle = '#fff';
@@ -650,7 +660,7 @@
           ctx.fill();
         }
         if (big) {
-          ctx.shadowBlur = 20;
+          ctx.shadowBlur = blur ? 20 : 0;
           ctx.fillStyle = '#ffffff';
           for (let k = 0; k < 3; k++) {
             const oa = G.time * 5.5 + k / 3 * TAU;

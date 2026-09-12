@@ -60,7 +60,7 @@
       id: 'plating', name: '装甲插板', icon: '▣', color: '#ff7a3d', maxLevel: 5,
       brief: '提高生命上限，并立即回复等量生命',
       desc: function (lv) {
-        const f = (k) => '生命上限 <b>+' + k * 15 + '</b>';
+        const f = (k) => '生命上限 <b>+' + k * 20 + '</b>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -68,7 +68,7 @@
       id: 'nano', name: '纳米修复', icon: '✚', color: '#9dff3c', maxLevel: 5,
       brief: '按最大生命的百分比持续回复生命',
       desc: function (lv) {
-        const f = (k) => '每秒回复 <b>' + (k * 0.3).toFixed(1) + '%</b> 最大生命';
+        const f = (k) => '每秒回复 <b>' + (k * 0.2).toFixed(2) + '%</b> 最大生命';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -227,7 +227,7 @@
         P.passives[card.id] = (P.passives[card.id] || 0) + 1;
         if (card.id === 'plating') {
           P.recalc();
-          P.hp = Math.min(P.maxHp, P.hp + 30);
+          P.hp = Math.min(P.maxHp, P.hp + 15);
         }
       }
       P.recalc();

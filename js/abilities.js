@@ -54,7 +54,7 @@
           const d = R * (0.28 + 0.72 * ((GG.time * 1.6 + i * 0.2) % 1));
           const x = p.x + Math.cos(aa) * d, y = p.y + Math.sin(aa) * d;
           hurtArea(GG, x, y, BAL.area(92), dmg, '#c8d2e8', [], 40);
-          FX().ring(x, y, '#c8d2e8', 4, 44, 0.18, 2);
+          if (i === 0) FX().ring(x, y, '#c8d2e8', 4, 44, 0.18, 2);
         }
       },
       end() {
@@ -220,7 +220,6 @@
           const d = Math.random() * 520;
           const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
           FX().bolt(x - 24, y - 1100, x, y, '#ffe14d', 0.22, 44);
-          FX().bolt(x + 18, y - 1100, x, y, '#ffffff', 0.18, 30);
           FX().ring(x, y, '#ffe14d', 8, 130, 0.32, 4);
           const SR = BAL.area(190);
           const near = E().near(x, y, SR);

@@ -102,8 +102,12 @@
     },
 
     resize() {
-      const dpr = Math.min(global.devicePixelRatio || 1, 2);
+      let dpr = Math.min(global.devicePixelRatio || 1, 2);
       const w = global.innerWidth, h = global.innerHeight;
+      const maxPixels = 3.2e6;
+      if (w * h * dpr * dpr > maxPixels) {
+        dpr = Math.max(1, Math.sqrt(maxPixels / Math.max(1, w * h)));
+      }
       this.w = w; this.h = h; this.dpr = dpr;
       this.canvas.width = Math.floor(w * dpr);
       this.canvas.height = Math.floor(h * dpr);
@@ -129,7 +133,7 @@
         if (this.state === 'playing') this.pause();
         else if (this.state === 'pause') this.resume();
       };
-      $('btnQuit').onclick = () => { Sfx.play('ui'); this.gameOver(false); };
+      $('btnQuit').onclick = () => { Sfx.play('ui'); this.gameOver(false, true); };
       $('btnAgain').onclick = () => { Sfx.play('ui'); this.start(this.mode || 'story'); };
       $('btnMenu').onclick = () => { Sfx.play('ui'); this.backToMenu(); };
       $('btnWinSave').onclick = () => { Sfx.play('ui'); this.openSaveName(); };
@@ -1080,7 +1084,7 @@
 
       if (this.mode === 'bossRush' && e.isRush) {
         this.toast('领 主 已 击 破');
-        for (let i = 0; i < 5; i++) this.spawnHeal(e.x, e.y, 26);
+        for (let i = 0; i < 3; i++) this.spawnHeal(e.x, e.y, 13);
         FX.ring(e.x, e.y, '#9dff3c', 20, 250, 0.7, 5);
         const r = this.bossRush;
         if (r) {
@@ -1104,8 +1108,8 @@
       if (!usable.length) {
         this.pendingLevelUps = 0;
         const p = this.player;
-        p.hp = Math.min(p.maxHp, p.hp + 30);
-        FX.text(p.x, p.y - 30, '+30', '#9dff3c', { size: 18 });
+        p.hp = Math.min(p.maxHp, p.hp + 15);
+        FX.text(p.x, p.y - 30, '+15', '#9dff3c', { size: 18 });
         $('screenLevel').classList.add('hidden');
         if (this.state === 'levelup') {
           this.state = 'playing';
@@ -1641,7 +1645,7 @@
       }
     },
 
-    gameOver(win) {
+    gameOver(win, quit) {
       if (this.state === 'over') return;
       this.state = 'over';
       this.hideAllScreens();
@@ -1677,11 +1681,43 @@
       let isNew = false;
       if (score > bestScore) { U.store.set(BEST_KEY, rec); isNew = true; }
 
-      $('overTitle').textContent = rushOver ? '挑 战 终 止'
-        : (endlessOver ? '无 尽 · 终 焉' : (win ? '通 关 达 成' : '系 统 崩 溃'));
-      const tc = rushOver ? '#ff8a3d'
-        : (endlessOver ? '#b14dff' : (win ? '#9dff3c' : '#ff4d6d'));
-      $('overTitle').style.color = tc;
+/* 结局文案：区分「战死 / 主动放弃 / 通关 / 无尽 / 领主挑战」 */
+      const ending = (() => {
+        if (rushOver) {
+          return {
+            t: '挑 战 终 止', c: '#ff8a3d',
+            s: rec.rushKills > 0
+              ? '已击破 <b>' + rec.rushKills + '</b> 位领主'
+              : '领主挑战结束'
+          };
+        }
+        if (endlessOver) {
+          return {
+            t: '无 尽 · 终 焉', c: '#b14dff',
+            s: '无尽领主永不倒下，成绩定格在 <b>' + fmtPct(rec.pct) + '</b> 伤害'
+          };
+        }
+        if (win) {
+          return {
+            t: '通 关 达 成', c: '#9dff3c',
+            s: '最终领主已被击溃 —— 存档可用于领主挑战'
+          };
+        }
+        if (quit) {
+          return {
+            t: '本 局 放 弃', c: '#ff8a3d',
+            s: '你主动切断了连接'
+          };
+        }
+        return {
+          t: '系 统 损 毁', c: '#ff4d6d',
+          s: '你的机体被攻击淹没而损毁'
+        };
+      })();
+      $('overTitle').textContent = ending.t;
+      $('overTitle').style.color = ending.c;
+      const subEl = $('overSub');
+      if (subEl) subEl.innerHTML = ending.s;
 
       let stats =
         statCard(U.formatTime(rec.time), '存活时间') +

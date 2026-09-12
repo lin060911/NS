@@ -9,6 +9,16 @@
   const Enemies = global.Enemies;
   const TAU = Math.PI * 2;
 
+  /* 领域配色：支持 #rgb / #rrggbb / #rrggbbaa，避免写死 fallback 把蓝色领域染成绿色 */
+  function hexToRgb(hex) {
+    let h = String(hex || '').replace('#', '').trim();
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    h = h.slice(0, 6);
+    const n = parseInt(h, 16);
+    if (isNaN(n) || h.length < 6) return '157,255,60';
+    return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+  }
+
   function cool(w, s, dt, cb) {
     if (w.t === undefined) w.t = 0;
     w.t -= dt;
@@ -77,7 +87,7 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(p.x, p.y, r * 0.1, p.x, p.y, r);
-    const rgb = color === '#7ad7ff' ? '122,215,255' : '157,255,60';
+    const rgb = hexToRgb(color);
     g.addColorStop(0, 'rgba(' + rgb + ',' + (0.16 + w._fk * 0.14) + ')');
     g.addColorStop(1, 'rgba(' + rgb + ',0)');
     ctx.fillStyle = g;
@@ -98,7 +108,7 @@
 
     for (const v of w._volts) {
       if (!v.cur || v.cur.dead || v.cur.hp <= 0) {
-        const n = Enemies.nearest(p.x, p.y, 700, v.hit);
+        const n = Enemies.nearest(p.x, p.y, Weapons.searchR(G), v.hit);
         if (!n) {
           v.a += dt * 3.2;
           v.hit.length = 0;
@@ -236,13 +246,13 @@
         if (e.dead || e.hp <= 0) continue;
         const dx = e.x - p.x, dy = e.y - p.y;
         const d = Math.hypot(dx, dy);
-        if (d > 720) continue;
+        if (d > Weapons.searchR(G)) continue;
         let a = Math.atan2(dy, dx);
         while (a < 0) a += TAU;
         if (a < lo || a >= hi) continue;
         if (d < bd) { bd = d; best = e; }
       }
-      if (!best) best = Enemies.nearest(p.x, p.y, 900);
+      if (!best) best = Enemies.nearest(p.x, p.y, Weapons.searchR(G));
       if (!best) continue;
       const x = best.x, y = best.y;
       const strikeR = BAL.area(132 + 16 * (s.groups - 1)) * (1 + (p.areaMul || 0));
@@ -269,7 +279,7 @@
     const p = P();
     const g = s.groups;
     cool(w, s, dt, () => {
-      const tgt = Enemies.nearest(p.x, p.y, Weapons.searchR(G) * 1.3);
+      const tgt = Enemies.nearest(p.x, p.y, Weapons.searchR(G));
       const x = tgt ? tgt.x : p.x + (Math.random() - 0.5) * 240;
       const y = tgt ? tgt.y : p.y + (Math.random() - 0.5) * 240;
       const r = BAL.area(128 + 26 * (g - 1)) * (1 + p.areaMul);
@@ -288,7 +298,8 @@
   function bombVolley(G, s, def) {
     const p = P();
     const tgt = Enemies.nearest(p.x, p.y, Weapons.searchR(G));
-    const a = tgt ? U.angle(p.x, p.y, tgt.x, tgt.y) : Math.random() * TAU;
+    if (!tgt) return;
+    const a = U.angle(p.x, p.y, tgt.x, tgt.y);
     for (let i = 0; i < s.groups; i++) {
       const aa = a + (i - (s.groups - 1) / 2) * 0.3;
       Weapons.add({
@@ -334,8 +345,9 @@
 
   function beamBarrage(G, s, def) {
     const p = P();
-    const tgt = Enemies.nearest(p.x, p.y, Weapons.searchR(G) * 1.2);
-    const a = tgt ? U.angle(p.x, p.y, tgt.x, tgt.y) : Math.random() * TAU;
+    const tgt = Enemies.nearest(p.x, p.y, Weapons.searchR(G));
+    if (!tgt) return;
+    const a = U.angle(p.x, p.y, tgt.x, tgt.y);
     for (let i = 0; i < s.groups; i++) {
       const aa = a + (i - (s.groups - 1) / 2) * 0.26;
       Weapons.add({
@@ -443,14 +455,14 @@
       spec: { width: 26, len: 640 } },
     { id: 's04', name: '自动防御卫星', form: 'seek', cd: 0.44, dps: 2000, effects: [], icon: '◎', color: '#ff9100', brief: '卫星炮击群消解弹幕',
       spec: { hitBoom: 92, hitBoomMul: 0.55 }, update: satUpdate, drawFx: drawSats },
-    { id: 's05', name: '严冬', form: 'crystal', cd: 0.95, dps: 800, effects: ['frost'], icon: '❄', color: '#7ab8ff', brief: '冰霜领域，减速易伤',
+    { id: 's05', name: '严冬', form: 'crystal', cd: 0.95, dps: 1200, effects: ['frost'], icon: '❄', color: '#7ab8ff', brief: '冰霜领域，减速易伤',
       spec: {}, aura: function (G, w, dt, def) {
         fieldAura(G, w, dt, def, { r: 600, rGrow: 0.10, cycle: 5.3, vuln: 0.40, vulnGrow: 0.025, bossVuln: 0.25, slow: 1, dot: 0.5, dmgK: 0.6 });
-      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#1d7bb9'); } },
-    { id: 's06', name: '腐朽', form: 'spore', cd: 0.9, dps: 800, effects: [], icon: '✤', color: '#28a333', brief: '腐化领域，伤害随子弹组提升',
+      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#7ab8ff'); } },
+    { id: 's06', name: '腐朽', form: 'spore', cd: 0.9, dps: 1100, effects: [], icon: '✤', color: '#28a333', brief: '腐化领域，伤害随子弹组提升',
       spec: {}, aura: function (G, w, dt, def) {
         fieldAura(G, w, dt, def, { r: 580, rGrow: 0.10, cycle: 99, vuln: 0, vulnGrow: 0, bossVuln: 0, slow: 0, dot: 1.5, dmgK: 0.7 });
-      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#1ca317'); } },
+      }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#28a333'); } },
     { id: 's07', name: '天罚', form: 'chain', cd: 0.95, dps: 1600, effects: ['shock'], icon: '⋚', color: '#ffd500', brief: '召唤落雷',
       spec: {}, update: judgeUpdate, drawFx: null },
     { id: 's08', name: '极寒病毒＋', form: 'crystal', cd: 0.95, dps: 2100, effects: ['frost', 'venom'], icon: '❄', color: '#13a196', brief: '强化极寒病毒，易伤剧毒',
@@ -494,9 +506,12 @@
       effectIds: c.effects, icon: c.icon, color: c.color, brief: c.brief,
       spec: c.spec, aura: c.aura, drawFx: c.drawFx
     });
-    def.baseCd = c.cd;
+def.baseCd = c.cd;
     def.sKind = c.id;
-    if (c.id === 's03') {
+    if (c.auraOnly) {
+      def.update = function () {};
+    } else if (c.id === 's03') {
+
       def.update = function (G, w, dt) {
         const s = this.stats(w.level, G.player);
         const p = G.player;

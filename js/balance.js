@@ -14,6 +14,11 @@
     SPAWN_ENDLESS_CAP: 21,
     SPAWN_ENDLESS_GROW: 0.022,
 
+    /* 敌人密度倍率：整体刷怪量提升，难度上升 */
+    SPAWN_MUL: 1.25,
+    /* 升级经验需求倍率：与密度同步提升，保证升级节奏不变 */
+    XP_NEED_MUL: 1.25,
+
     HP_SCALE: 8,
     HP_GROW: 1.10,
     HP_START: 0.5,
@@ -54,9 +59,9 @@
     if (endless) {
       const base = BAL.SPAWN_BASE + BAL.WIN_TIME * BAL.SPAWN_GROW;
       return Math.min(BAL.SPAWN_ENDLESS_CAP,
-        base + Math.max(0, t - (endlessStart || BAL.WIN_TIME)) * BAL.SPAWN_ENDLESS_GROW);
+        base + Math.max(0, t - (endlessStart || BAL.WIN_TIME)) * BAL.SPAWN_ENDLESS_GROW) * BAL.SPAWN_MUL;
     }
-    return Math.min(BAL.SPAWN_MAX, BAL.SPAWN_BASE + t * BAL.SPAWN_GROW);
+    return Math.min(BAL.SPAWN_MAX, BAL.SPAWN_BASE + t * BAL.SPAWN_GROW) * BAL.SPAWN_MUL;
   };
 
   BAL.creep = function (t) {
@@ -79,7 +84,8 @@
   };
 
   BAL.xpNeed = function (level) {
-    return Math.max(1, Math.round(BAL.XP_A + BAL.XP_B * level + BAL.XP_C * Math.pow(level, BAL.XP_P)));
+    const raw = BAL.XP_A + BAL.XP_B * level + BAL.XP_C * Math.pow(level, BAL.XP_P);
+    return Math.max(1, Math.round(raw * BAL.XP_NEED_MUL));
   };
 
   global.BAL = BAL;

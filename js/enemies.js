@@ -1219,7 +1219,7 @@
           const spd = Math.hypot(b.vx, b.vy);
           b.vx = Math.cos(na) * spd;
           b.vy = Math.sin(na) * spd;
-          if (Math.random() < 0.4) {
+          if (Math.random() < 0.16) {
             FX.burst(b.x, b.y, b.color, 1, { speed: 18, life: 0.3, size: 2 });
           }
         }
@@ -1264,7 +1264,7 @@
       }
       if (opts.slow) e.slowT = Math.max(e.slowT, opts.slow);
 
-      if (amount >= 1 && Math.random() < 0.4 && FX.texts.length < 34) {
+      if (amount >= 1 && Math.random() < 0.22 && FX.texts.length < 30) {
         FX.text(e.x, e.y - e.r - 4, Math.round(amount), opts.crit ? '#ffd23c' : '#ffffff',
           { size: opts.crit ? 17 : 13, life: 0.6 });
       }
@@ -1303,9 +1303,9 @@
         FX.burst(e.x, e.y, e.color, 12, { speed: 190, life: 0.4, size: 2.4 });
       }
 
-      const healChance = e.isBoss ? 1 : (e.elite ? 0.025 : 0.003);
+      const healChance = e.isBoss ? 1 : (e.elite ? 0.02 : 0.0026);
       if (Math.random() < healChance) {
-        G.spawnHeal(e.x, e.y, e.isBoss ? 30 : (e.elite ? 11 : 4.5));
+        G.spawnHeal(e.x, e.y, e.isBoss ? 15 : (e.elite ? 5.5 : 2.2));
       }
       Sfx.play('kill');
 
@@ -1359,13 +1359,14 @@
 
     drawBullets(ctx) {
       const B = this.bullets;
+      /* 低画质时关掉逐弹发光（shadowBlur 是最贵的绘制开销之一） */
+      const glow = (global.FX && global.FX.quality > 0.6);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < B.length; i++) {
         const b = B[i];
         ctx.fillStyle = b.frozen > 0 ? '#9b6bff' : b.color;
-        ctx.shadowColor = ctx.fillStyle;
-        ctx.shadowBlur = 18;
+        if (glow) { ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12; }
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r * 1.5, 0, TAU);
         ctx.fill();
@@ -1374,8 +1375,7 @@
         ctx.arc(b.x, b.y, b.r, 0, TAU);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 10;
+        if (glow) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 8; }
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r * 0.5, 0, TAU);
         ctx.fill();
