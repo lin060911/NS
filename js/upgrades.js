@@ -103,7 +103,7 @@
 
     KIND_META: {
       new: {
-        kind: 'new', icon: '✧', color: '#5ae484', cls: 't-new',
+        kind: 'new', icon: '✧', color: '#66eb8e', cls: 't-new',
         title: '获取弹珠',
         sub: '三选一 · B 阶 · 可刷新一次',
         desc: '随机 3 颗 B 阶弹珠选 1 颗。' +

@@ -65,7 +65,7 @@
       const before = this.maxHp;
       this.recalc();
       /* 升级带来的生命上限提升只补一半，避免"升级即回血" */
-      if (this.maxHp > before) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp - before) * 0.5);
+      if (this.maxHp > before) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp - before) * 1);
     }
     return ups;
   }

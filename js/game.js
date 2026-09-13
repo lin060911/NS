@@ -1207,15 +1207,15 @@
         'passive': '强 化 被 动'
       };
       const titlesub = {
-        'new': '三选一 · B 阶 · 可刷新一次',
-        'up': '三选一 · 弹珠等级 +1',
-        'passive': '三选一 · 被动等级 +1'
+        'new': '三选一 · 获得一个 B 阶 弹珠',
+        'up': '三选一 · 一个弹珠等级 +1',
+        'passive': '三选一 · 一个被动等级 +1'
       };
       this.setLevelHead(titles[ev.kind] || '强 化', titlesub[ev.kind] || '');
 
       for (const c of ev.cards) {
         const el = document.createElement('div');
-        el.className = 'card ' + (c.kind === 'new' ? 'new' : 'up');
+        el.className = 'card k-' + c.kind;
         const effLine = c.effect ? '<div class="c-eff">' + c.effect + '</div>' : '';
         const curRow = c.cur
           ? '<div class="c-row"><span class="ck">' + (c.curLabel || '现在') +
@@ -1515,7 +1515,7 @@
       this.chestOptions = opts;
       for (const o of opts) {
         const el = document.createElement('div');
-        el.className = 'card ' + (o.tagCls === 't-new' ? 'new' : 'up') + (o.disabled ? ' locked' : '');
+        el.className = 'card k-' + (o.tagCls === 't-new' ? 'new' : 'up') + (o.disabled ? ' locked' : '');
         el.innerHTML =
           '<div class="c-ic" style="color:' + o.color + '">' + o.icon + '</div>' +
           '<div class="c-name">' + o.name + '</div>' +
