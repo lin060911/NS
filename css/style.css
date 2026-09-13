@@ -16,13 +16,11 @@
   --shadow: 0 24px 56px -30px rgba(0, 0, 0, .9);
   --shadow-soft: 0 18px 44px -28px rgba(247, 247, 247, 0.9);
 
-  /* 圆角三级层次：面板/卡片 --r，中等区块 --r-sm，按钮/标签/进度条 --r-xs */
-  --r: 20px;
+  --r: 16px;
   --r-sm: 12px;
   --r-xs: 8px;
   --r-pill: 999px;
 
-  /* ── 按钮彩通 ── */
   --c-cyan: #5ec9dd;
   --c-teal: #55c9ab;
   --c-blue: #6a8df5;
@@ -108,6 +106,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   border: 1px solid var(--line);
   backdrop-filter: blur(6px);
   white-space: nowrap;
+  color: #d9e0f2;
 }
 .chip .ic { font-size: 12px; }
 .chip .lv { color: var(--cyan); font-family: var(--mono); font-size: 10.5px; }
@@ -147,7 +146,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 
 /* ── 弹层 ───────────────────────────────── */
 
-/* 入场动效：去掉过冲，改为干净的淡入上移 */
 @keyframes screenFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes panelPop {
   from { opacity: 0; transform: translateY(10px); }
@@ -174,7 +172,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .panel {
   position: relative;
   width: min(94vw, 500px);
-  /* 轻量玻璃底 + 1px 细描边 */
   background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
   border: 1px solid var(--line2);
   border-radius: var(--r);
@@ -184,7 +181,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   backdrop-filter: blur(10px);
   animation: panelPop .26s ease both;
 }
-/* 顶部一抹青紫高光（压细到 1px） */
 .panel::before {
   content: ""; position: absolute; top: 0; left: 16%; right: 16%; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(94, 201, 221, .4), rgba(154, 134, 224, .4), transparent);
@@ -229,9 +225,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .howto b { color: #eef1f6; font-weight: 600; }
 .howto b.danger, .howto strong.danger { color: #e08fa0; }
 
-/* ── 按钮：统一细描边 + 淡填充 + 胶囊圆角 ── */
 .btn {
-  /* 默认：靛蓝描边款 */
   --fill: rgba(106, 141, 245, .12);
   --fill-h: rgba(106, 141, 245, .22);
   --bc: rgba(106, 141, 245, .45);
@@ -300,7 +294,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   --bc: rgba(242, 199, 154, .6); --bch: #f2c79a;
   --fg: #fbdccb; --ac: #f8815d;
 }
-#btnSaves, #btnSavesManage { /* 蓝 */
+#btnSavesManage { /* 蓝 —— 存档屏的「编辑 / 返回挑战」切换键 */
   --fill: rgba(103, 179, 241, .2); --fill-h: rgba(103, 179, 241, .32);
   --bc: rgba(105, 195, 255, .55); --bch: #69c3ff;
   --fg: #d3e8fb; --ac: #67b3f1;
@@ -362,10 +356,10 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 
 .card {
   /* kind 主色：kind 卡与进入 kind 后出现的卡共用同一色板，改 --kc 即可全链路生效 */
-  --kc: #d85d5d;
+  --kc: #c2c2c2;
   --kc-rgb: 216, 93, 93;
-  --kc-soft: rgba(216, 93, 93, .06);
-  --kc-glow: rgba(216, 93, 93, .55);
+  --kc-soft: rgba(218, 218, 218, 0.06);
+  --kc-glow: rgba(204, 204, 204, 0.55);
   width: min(90vw, 244px); min-height: 172px;
   padding: 18px 16px; cursor: pointer; text-align: left;
   background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
@@ -759,7 +753,36 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .fusion-actions .btn { width: auto; min-width: 160px; margin-top: 0; }
 .fusion-tip { margin-top: 14px; font-size: 11.5px; color: var(--dim); line-height: 1.8; }
 .fusion-tip b { color: #b3bccb; }
-.card.fcard.disabled { opacity: .28; pointer-events: none; filter: grayscale(.6); }
+/* 不可选：阶位不匹配 / S 阶终点
+ * 作用域严格限定 .card.fcard —— 只影响融合协议列表，不触碰升级卡 / 宝箱卡。
+ * 明显压暗 + 全去色 + 虚线边，和可选卡片拉开差距一眼可辨，
+ * 但保留文字可读性（不做纯黑遮罩）。 */
+.card.fcard.disabled {
+  opacity: .32;
+  pointer-events: none;
+  filter: grayscale(1) brightness(.6);
+  border-style: dashed;
+  border-color: var(--line2);
+  box-shadow: none;
+  transition: opacity .2s ease, filter .2s ease;
+}
+.card.fcard.disabled .f-ic { opacity: .7; }
+.card.fcard.disabled .f-name { color: #8b94a3; }
+.card.fcard.disabled .f-desc,
+.card.fcard.disabled .f-foot { color: #6f7889; }
+
+/* S 阶终点：常驻不可选，斜纹底 + 淡金虚线强调「到此为止」 */
+.card.fcard.end {
+  border-color: rgba(217, 189, 99, .28);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, .03) 0 8px,
+      transparent 8px 16px
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
+}
+.card.fcard.end .f-tag.t-s { opacity: .55; }
 
 /* ── 暂停面板 ───────────────────────────── */
 .pause-panel { width: min(96vw, 860px); }
@@ -1174,7 +1197,6 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   .f-desc { font-size: 11.5px; line-height: 1.5; }
 }
 
-/* ── 减少动效（系统设置「减弱动态效果」时生效） ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;

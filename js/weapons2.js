@@ -447,7 +447,7 @@
   });
 
   const S_DEFS = [
-    { id: 's01', name: '金属风暴', form: 'pierce', cd: 0.38, dps: 3600, effects: [], icon: '✸', color: '#dfe6f2', brief: '螺旋向外的杀戮光环',
+    { id: 's01', name: '金属风暴', form: 'pierce', cd: 0.78, dps: 7200, effects: [], icon: '✸', color: '#dfe6f2', brief: '螺旋向外的杀戮光环',
       spec: { shape: 'shuriken', r: 10, pierce: 99 } },
     { id: 's02', name: '饱和轰炸', form: 'blast', cd: 1.2, dps: 2000, effects: [], icon: '◉', color: '#ff8a3d', brief: '大范围炸弹饱和轰炸',
       spec: { blastR: 150, blastGrow: 0.05 }, fire: bombVolley },

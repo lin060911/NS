@@ -119,7 +119,6 @@
       $('btnNewGame').onclick = () => { Sfx.init(); Sfx.play('ui'); this.start('story'); };
       $('btnBossRush').onclick = () => { Sfx.init(); Sfx.play('ui'); this.openSaves('pick'); };
       $('btnSavesBack').onclick = () => { Sfx.play('ui'); this.closeSaves(); };
-      $('btnSaves').onclick = () => { Sfx.init(); Sfx.play('ui'); this.openSaves('manage'); };
       $('btnSavesManage').onclick = () => { Sfx.play('ui'); this.toggleSavesManage(); };
       $('btnSaveNameOk').onclick = () => { Sfx.play('ui'); this.confirmSaveName(); };
       $('btnSaveNameSkip').onclick = () => { Sfx.play('ui'); $('screenSaveName').classList.add('hidden'); this.gameOver(true); };
@@ -307,6 +306,9 @@
       $('savesTip').textContent = pick
         ? '选择存档，携带其构筑进入挑战（不掉经验 · 无法升级）'
         : '最多保留 10 个存档，超出挤掉最早的';
+      // 主菜单已无「存档管理」入口，编辑键承担模式切换 —— 文案要明确回退路径
+      const mg = $('btnSavesManage');
+      if (mg) mg.textContent = pick ? '编 辑' : '返 回 挑 战';
       if (!list.length) {
         box.innerHTML = '<div class="sv-empty">暂无存档 —— 先在「开启新篇」通关并保存</div>';
         return;
@@ -1301,17 +1303,21 @@
         const def = Weapons.defs[w.id];
         const sel = this.fusionSel.indexOf(i);
         const maxed = w.level >= def.maxLevel;
+        // S 阶是融合终点，任何情况下都不能参与融合 —— 一开始就标为不可选，
+        // 不用等玩家选中别的东西才变暗，前后状态一致。
+        const end = def.tier === 3;
 
-        let disabled = false;
-        if (sel < 0 && sel0 !== undefined && sel0 !== i) {
+        let disabled = end;
+        if (!disabled && sel < 0 && sel0 !== undefined && sel0 !== i) {
           const other = p.weapons[sel0];
           if (other && !Fusions.preview(other, w)) disabled = true;
         }
 
         const el = document.createElement('div');
-        el.className = 'card fcard' + (sel >= 0 ? ' selected' : '') + (disabled ? ' disabled' : '');
+        el.className = 'card fcard' + (sel >= 0 ? ' selected' : '') +
+          (disabled ? ' disabled' : '') + (end ? ' end' : '');
 
-        const foot = maxed ? '已满级' : (def.tier === 3 ? '已是终点' : '');
+        const foot = end ? '已是终点 · 不可融合' : (maxed ? '已满级' : '');
 
         el.innerHTML = this.fusionCardHtml(def,
           def.tierName + ' 阶 · Lv' + w.level + '/' + def.maxLevel, foot) +
