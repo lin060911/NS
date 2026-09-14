@@ -38,7 +38,7 @@
     },
 
     shock: {
-      id: 'shock', name: '麻痹', icon: '⚡', color: '#ffe14d',
+      id: 'shock', name: '麻痹', icon: '≶', color: '#ffe14d',
       brief: '麻痹目标，并向邻近敌人传导伤害（首领免疫）',
       onHit(G, e, pw, dmg) {
         if (!e.isBoss) e.paralyze = Math.max(e.paralyze || 0, 0.3 + pw * 0.55);
@@ -62,7 +62,7 @@
 
   const Effects = {
     name(id) { return DEFS[id] ? DEFS[id].name : ''; },
-    color(id) { return DEFS[id] ? DEFS[id].color : '#8fa3c8'; },
+    color(id) { return DEFS[id] ? DEFS[id].color : '#ffffff'; },
     icon(id) { return DEFS[id] ? DEFS[id].icon : '·'; },
     brief(id) { return DEFS[id] ? DEFS[id].brief : ''; },
 

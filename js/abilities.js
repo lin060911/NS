@@ -63,7 +63,7 @@
       }
     });
     FX().addFlash(0.35);
-    G.toast('◆ 飞 刃 龙 卷 ◆');
+    G.toast('🌀 杀 戮 风 暴 🌀');
   }
 
   function carpetBomb(G) {
@@ -85,7 +85,7 @@
       }
     });
     FX().addFlash(0.3);
-    G.toast('◆ 地 毯 轰 炸 ◆');
+    G.toast('💣 地 毯 轰 炸 💣');
   }
 
   function annihilation(G) {
@@ -112,7 +112,7 @@
       },
       end() { FX().addFlash(0.45); FX().addShake(12); }
     });
-    G.toast('◆ 湮 灭 射 线 ◆');
+    G.toast('👾 湮 灭 射 线 👾');
   }
 
   function orbitalBarrage(G) {
@@ -146,7 +146,7 @@
       },
       end() { FX().ring(p.x, p.y, '#ffc93c', 60, 340, 0.5, 6); FX().addShake(8); }
     });
-    G.toast('◆ 轨 道 炮 幕 ◆');
+    G.toast('🌐 轨 道 炮 幕 🌐');
   }
 
   function absoluteZero(G) {
@@ -178,7 +178,7 @@
         FX().addFlash(0.6); FX().addShake(16);
       }
     });
-    G.toast('◆ 绝 对 零 度 ◆');
+    G.toast('❄️ 绝 对 零 度 ❄️');
   }
 
   function plagueBurst(G) {
@@ -206,7 +206,7 @@
       }
     });
     FX().burst(p.x, p.y, '#9dff3c', 50, { speed: 340, life: 1, size: 3.4 });
-    G.toast('◆ 瘟 疫 爆 发 ◆');
+    G.toast('🧪 千 毒 万 蛊 🧪');
   }
 
   function thunderStorm(G) {
@@ -235,7 +235,7 @@
       },
       end() { FX().addFlash(0.5); FX().addShake(14); }
     });
-    G.toast('◆ 天 罚 雷 暴 ◆');
+    G.toast('⚡ 神 威 天 罚 ⚡');
   }
 
   function singularityCollapse(G) {
@@ -268,7 +268,7 @@
         FX().burst(x, y, '#b14dff', 80, { speed: 460, life: 1.1, size: 4 });
       }
     });
-    G.toast('◆ 奇 点 坍 缩 ◆');
+    G.toast('🕳️ 万 有 引 力 🕳️');
   }
 
   function make(id, name, icon, color, cd, brief, core) {
@@ -279,14 +279,14 @@
   }
 
   const DEFS = {
-    'metalstorm':  make('metalstorm',  '飞刃龙卷', '🌀', '#c8d2e8', 70, '持续 4.5 秒的飞刃风暴环绕自身，绞杀周围一切', metalCyclone),
+    'metalstorm':  make('metalstorm',  '杀戮风暴', '🌀', '#c8d2e8', 70, '持续 4.5 秒的飞刃风暴环绕自身，绞杀周围一切', metalCyclone),
     'saturation':  make('saturation',  '地毯轰炸', '💣', '#ff8a3d', 75, '持续 4 秒全屏轰炸，结束时中心大爆轰', carpetBomb),
     'annihilate':  make('annihilate',  '湮灭射线', '👾', '#ff3ec8', 65, '持续 4 秒三道旋转光束扫射全场', annihilation),
     'satellite':   make('satellite',   '轨道炮幕', '🌐', '#ffc93c', 60, '持续 5 秒，卫星消解弹幕并齐射导弹', orbitalBarrage),
     'deepwinter':  make('deepwinter',  '绝对零度', '❄️', '#7ad7ff', 80, '全场冻结 4.2 秒，解冻瞬间碎裂爆伤', absoluteZero),
-    'decay':       make('decay',       '瘟疫爆发', '☣️', '#9dff3c', 70, '持续 5 秒剧毒领域，全场叠毒腐蚀', plagueBurst),
-    'judgement':   make('judgement',   '天罚雷暴', '⚡', '#ffe14d', 85, '持续 4.5 秒全屏落雷，劈中者麻痹', thunderStorm),
-    'singularity': make('singularity', '奇点坍缩', '🕳️', '#9b6bff', 90, '张开黑洞吸附全场 4 秒，随后坍缩爆轰', singularityCollapse)
+    'decay':       make('decay',       '千毒万蛊', '🧪', '#9dff3c', 70, '持续 5 秒剧毒领域，全场叠毒腐蚀', plagueBurst),
+    'judgement':   make('judgement',   '神威天罚', '⚡', '#ffe14d', 85, '持续 4.5 秒全屏落雷，劈中者麻痹', thunderStorm),
+    'singularity': make('singularity', '万有引力', '🕳️', '#9b6bff', 90, '张开黑洞吸附全场 4 秒，随后坍缩爆轰', singularityCollapse)
   };
 
   const Abilities = {

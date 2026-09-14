@@ -755,10 +755,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .fusion-actions .btn { width: auto; min-width: 160px; margin-top: 0; }
 .fusion-tip { margin-top: 14px; font-size: 11.5px; color: var(--dim); line-height: 1.8; }
 .fusion-tip b { color: #b3bccb; }
-/* 不可选：阶位不匹配 / S 阶终点
- * 作用域严格限定 .card.fcard —— 只影响融合协议列表，不触碰升级卡 / 宝箱卡。
- * 明显压暗 + 全去色 + 虚线边，和可选卡片拉开差距一眼可辨，
- * 但保留文字可读性（不做纯黑遮罩）。 */
+
 .card.fcard.disabled {
   opacity: .32;
   pointer-events: none;
@@ -1007,7 +1004,7 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
   color: var(--cyan); margin: 14px 0 7px;
 }
-.cx-list { display: flex; flex-direction: column; gap: 6px; }
+.cx-list { display: flex; flex-direction: column; gap: 6px; color: #eef1f6;}
 .cx-item {
   border: 2px solid var(--line); border-radius: var(--r-sm);
   background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
