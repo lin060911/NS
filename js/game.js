@@ -28,17 +28,17 @@
     {
       id: 'hunter', name: '猎人', icon: '✧', color: '#ff7a3d',
       brief: '对领主伤害更高，对杂兵更低',
-      desc: '对<b>领主</b>伤害 <b>+20%</b>　·　对<b>其他敌人</b>伤害 <b>-15%</b>'
+      desc: '对<b>领主</b>伤害 <b>+20%</b><br><span class="dim">对其他敌人伤害 <b>-15%</b></span>'
     },
     {
       id: 'undying', name: '不灭', icon: '✟', color: '#b14dff',
       brief: '免疫一次致命伤',
-      desc: '致命伤留 <b>1</b> 点生命并无敌 <b>3</b> 秒，一次性。<b>挡不住紫色秒杀</b>'
+      desc: '致命伤留 <b>1</b> 点生命并无敌 <b>3</b> 秒<br><span class="dim">一次性 · 挡不住紫色秒杀</span>'
     },
     {
       id: 'roar', name: '咆哮', icon: '◉', color: '#ffc93c',
       brief: '解锁技能「咆哮」（R 键，冷却 120 秒）',
-      desc: '清场（<b>领主除外</b>）并吸收所有经验球'
+      desc: '清场并吸收所有经验球<br><span class="dim">领主除外 · 冷却 120 秒</span>'
     }
   ];
 
@@ -1500,19 +1500,21 @@
           id: 'codex', name: '智库', icon: '❖', color: '#38f0ff', tag: '智 库', tagCls: 't-up',
           brief: '所有弹珠升一级',
           detail: p.weapons.length
-            ? '当前 <b>' + p.weapons.length + '</b> 件弹珠各升 <b>1</b> 级（满级的不再提升）'
+            ? '当前 <b>' + p.weapons.length + '</b> 件弹珠各升 <b>1</b> 级' +
+              '<br><span class="dim">满级的不再提升</span>'
             : '当前没有弹珠可升级'
         },
         {
           id: 'flesh', name: '肉身', icon: '▣', color: '#ff7a3d', tag: '肉 身', tagCls: 't-new',
           brief: '伤害 +10%',
-          detail: '所有弹珠伤害 <b>+10%</b>，可重复叠加'
+          detail: '所有弹珠伤害 <b>+10%</b><br><span class="dim">可重复叠加</span>'
         },
         {
           id: 'blessing', name: '祝福', icon: '✧', color: '#ffc93c', tag: '祝 福', tagCls: 't-up',
           brief: '随机获得一个特殊效果',
           detail: left.length
-            ? '还剩 <b>' + left.length + ' / ' + BLESSINGS.length + '</b> 种未获得，开箱揭晓'
+            ? '还剩 <b>' + left.length + ' / ' + BLESSINGS.length + '</b> 种未获得' +
+              '<br><span class="dim">开箱揭晓</span>'
             : '已获得全部祝福',
           disabled: left.length === 0
         }
@@ -2045,7 +2047,8 @@
       ctx.fillRect(0, 0, w, h);
 
       this.drawStars(ctx);
-      this.drawGrid(ctx);
+      /* 掉帧时省掉全屏网格（每帧几十条长线，性价比最低的一层） */
+      if (!FX.lean) this.drawGrid(ctx);
 
       let ox = -this.cam.x + w / 2;
       let oy = -this.cam.y + h / 2;
@@ -2055,6 +2058,8 @@
       }
       ctx.save();
       ctx.translate(ox, oy);
+      this._ox = ox;
+      this._oy = oy;
 
       Telegraph.draw(ctx);
 
@@ -2068,12 +2073,15 @@
       Enemies.draw(ctx);
       this.drawChests(ctx);
 
+      Weapons.draw(ctx, this);
+      FX.draw(ctx);
+
+      /* 主角最后画：z 轴最高，任何弹幕 / 爆炸 / 粒子都压不到他身上
+         （drawWeaponFx 是脚下的领域光环，仍留在底层） */
       if (this.player && this.state !== 'menu') {
         this.player.draw(ctx, this);
       }
 
-      Weapons.draw(ctx, this);
-      FX.draw(ctx);
       FX.drawTexts(ctx);
 
       ctx.restore();
@@ -2088,7 +2096,7 @@
 
       if (this.player && this.state === 'playing') {
         const r = this.player.hp / this.player.maxHp;
-        if (r < 0.3) {
+        if (r < 0.3 && !FX.minimal) {
           const a = (0.3 - r) / 0.3;
           const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.28, w / 2, h / 2, Math.max(w, h) * 0.72);
           g.addColorStop(0, 'rgba(255,40,80,0)');
@@ -2097,7 +2105,78 @@
           ctx.fillRect(0, 0, w, h);
         }
         Input.draw(ctx);
+        this.drawBossPointers(ctx);
       }
+    },
+
+    /* ── 领主指向标 ──────────────────────────────────────────
+       领主跑到画面外时，在屏幕边缘（玩家 → 领主方向）画一枚三角指针，
+       附距离数字，方便追击 / 拉扯。画面内不显示，避免遮挡。        */
+    drawBossPointers(ctx) {
+      const list = this.bosses;
+      if (!list || !list.length || !this.player) return;
+      const w = this.w, h = this.h;
+      const ox = this._ox === undefined ? (-this.cam.x + w / 2) : this._ox;
+      const oy = this._oy === undefined ? (-this.cam.y + h / 2) : this._oy;
+      const cx = w / 2, cy = h / 2;
+      const pad = 34;
+      const m = Math.min(w, h) * 0.055 + 16;
+      const hw = w / 2 - m, hh = h / 2 - m;
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < list.length; i++) {
+        const b = list[i];
+        if (!b || b.dead || b.hp <= 0) continue;
+        const sx = b.x + ox, sy = b.y + oy;
+        if (sx >= pad && sx <= w - pad && sy >= pad && sy <= h - pad) continue;
+
+        let dx = sx - cx, dy = sy - cy;
+        const len = Math.hypot(dx, dy) || 1;
+        dx /= len; dy /= len;
+        let t = Infinity;
+        if (Math.abs(dx) > 1e-6) t = Math.min(t, hw / Math.abs(dx));
+        if (Math.abs(dy) > 1e-6) t = Math.min(t, hh / Math.abs(dy));
+        if (!isFinite(t)) t = 0;
+        const px = cx + dx * t, py = cy + dy * t;
+        const a = Math.atan2(dy, dx);
+        const col = b.isFinal ? '#d9bd63' : (b.phase2 ? '#b14dff' : (b.color || '#ff3ec8'));
+        const pulse = 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(this.time * 6));
+        const sz = 13;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(a);
+        ctx.globalAlpha = pulse;
+        ctx.shadowColor = col;
+        ctx.shadowBlur = FX.minimal ? 0 : 14;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(sz, 0);
+        ctx.lineTo(-sz * 0.8, sz * 0.7);
+        ctx.lineTo(-sz * 0.45, 0);
+        ctx.lineTo(-sz * 0.8, -sz * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.9)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.restore();
+
+        if (!FX.minimal) {
+          const d = Math.round(U.dist(b.x, b.y, this.player.x, this.player.y));
+          const tx = px - dx * 21, ty = py - dy * 21;
+          ctx.globalAlpha = 0.9;
+          ctx.font = '700 11px ' + global.FONT_MONO;
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(0,0,0,.72)';
+          ctx.strokeText(d, tx, ty);
+          ctx.fillStyle = col;
+          ctx.fillText(d, tx, ty);
+        }
+      }
+      ctx.restore();
     },
 
     drawStars(ctx) {

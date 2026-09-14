@@ -11,10 +11,17 @@
     shake: 0,
     flash: 0,
 
-    /* ── 特效预算：硬性上限 + 自适应画质，掉帧时自动减量保帧率 ── */
+    /* ── 特效预算：硬性上限 + 自适应画质，掉帧时自动减量保帧率 ──
+       MAX 会随画质整体缩放：掉帧越狠，各类特效的硬上限越低。      */
     MAX: { particles: 340, texts: 32, rings: 64, bolts: 44 },
+    MAX_FULL: { particles: 340, texts: 32, rings: 64, bolts: 44 },
     quality: 1,
     _avgMs: 16,
+    /* 掉帧档位：lean = 削减装饰性特效；minimal = 只保留必要反馈 */
+    lean: false,
+    minimal: false,
+    LEAN_AT: 0.5,
+    MIN_AT: 0.34,
 
     /* 按画质随机取整缩放数量（避免"至少 1 个"导致削减失效） */
     scale(n) {
@@ -33,6 +40,21 @@
       this.flash = 0;
     },
 
+    /* 画质档位 → 硬性上限：低画质时直接砍掉预算，并裁掉超出部分 */
+    syncBudget() {
+      const k = this.quality >= 0.66 ? 1
+        : (this.quality >= this.MIN_AT
+          ? (this.quality - this.MIN_AT) / (0.66 - this.MIN_AT) * 0.55 + 0.18
+          : 0.18);
+      for (const key in this.MAX_FULL) {
+        this.MAX[key] = Math.max(6, Math.round(this.MAX_FULL[key] * k));
+      }
+      if (this.particles.length > this.MAX.particles) this.particles.length = this.MAX.particles;
+      if (this.rings.length > this.MAX.rings) this.rings.length = this.MAX.rings;
+      if (this.bolts.length > this.MAX.bolts) this.bolts.length = this.MAX.bolts;
+      if (this.texts.length > this.MAX.texts) this.texts.length = this.MAX.texts;
+    },
+
     addShake(v) { this.shake = Math.min(26, this.shake + v); },
     addFlash(v) { this.flash = Math.min(1, this.flash + v); },
 
@@ -41,6 +63,8 @@
       const spd = opts.speed || 150;
       const life = opts.life || 0.5;
       const size = opts.size || 3;
+      /* 极低画质：粒子整批封顶，避免大量小爆发叠加 */
+      if (this.minimal && count > 3) count = 3;
       let n = this.scale(count);
       if (n <= 0) return;
       const room = this.MAX.particles - this.particles.length;
@@ -63,7 +87,8 @@
 
     ring(x, y, color, r0, r1, life, width) {
       if (this.rings.length >= this.MAX.rings) return;
-      if (this.quality < 0.7 && Math.random() > 0.55) return;
+      /* 掉帧时按档位概率丢弃光环：装饰性光环最先被砍 */
+      if (this.quality < this.LEAN_AT && Math.random() > (this.minimal ? 0.25 : 0.55)) return;
       this.rings.push({ x, y, color, r0, r1, life, max: life, w: width || 3 });
     },
 
@@ -101,11 +126,17 @@
     },
 
     update(dt) {
-      /* 自适应画质：平均帧时间偏长就下调特效密度，恢复到 50fps 以上再逐步放回 */
+      /* 自适应画质：平均帧时间偏长就下调特效密度，恢复到 50fps 以上再逐步放回。
+         掉得比回升快得多（掉帧要立刻见效，回升则慢慢试探）。 */
       const ms = Math.max(1, Math.min(60, (dt || 0.016) * 1000));
-      this._avgMs += (ms - this._avgMs) * 0.06;
-      if (this._avgMs > 26) this.quality = Math.max(0.3, this.quality - dt * 0.7);
-      else if (this._avgMs < 19) this.quality = Math.min(1, this.quality + dt * 0.35);
+      this._avgMs += (ms - this._avgMs) * 0.08;
+      if (this._avgMs > 30) this.quality = Math.max(0.22, this.quality - dt * 1.8);
+      else if (this._avgMs > 24) this.quality = Math.max(0.22, this.quality - dt * 0.9);
+      else if (this._avgMs < 19) this.quality = Math.min(1, this.quality + dt * 0.30);
+
+      this.lean = this.quality < this.LEAN_AT;
+      this.minimal = this.quality < this.MIN_AT;
+      this.syncBudget();
 
       const P = this.particles;
       for (let i = P.length - 1; i >= 0; i--) {

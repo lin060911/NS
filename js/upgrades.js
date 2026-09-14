@@ -3,64 +3,88 @@
 
   const U = global.U;
 
-  const P18 = (lv) => Math.pow(1.18, lv);
   const pct = (v) => '×' + v.toFixed(2);
   const rnd = (v) => Math.round(v);
+  const pc = (v) => rnd(v * 100) + '%';
+
+  const POWER_STEP = 0.30;
+  const powerMul = (lv) => 1 + POWER_STEP * (lv || 0);
+
+  const OC_STEP = 0.30;
+  const ocRate = (lv) => 1 + OC_STEP * (lv || 0);
+
+  const CRIT_C = [0.15, 0.25, 0.40, 0.50, 0.65, 0.75];
+  const CRIT_M = [1.50, 1.75, 2.00, 2.25, 2.50, 2.75];
+  const clampLv = (lv, n) => U.clamp(Math.round(lv || 0), 0, n);
+  const critChanceAt = (lv) => CRIT_C[clampLv(lv, CRIT_C.length - 1)];
+  const critMulAt = (lv) => CRIT_M[clampLv(lv, CRIT_M.length - 1)];
+
+  function splitPattern(lv) {
+    const W = global.Weapons;
+    const tbl = (W && W.SPLIT_PATTERN) || [[1]];
+    return tbl[clampLv(lv, tbl.length - 1)];
+  }
 
   const PASSIVES = [
     {
       id: 'power', name: '力量增幅', icon: '✦', color: '#824dff', maxLevel: 5,
-      brief: '提升所有弹珠造成的伤害',
+      brief: '每级提升 30% 弹珠伤害，满级 +150%',
       desc: function (lv) {
-        return {
-          cur: '伤害 <b>' + pct(P18(lv)) + '</b>　（+' + rnd((P18(lv) - 1) * 100) + '%）',
-          next: lv < this.maxLevel
-            ? '伤害 <b>' + pct(P18(lv + 1)) + '</b>　（+' + rnd((P18(lv + 1) - 1) * 100) + '%）'
-            : '已达最高等级'
-        };
+        const f = (k) => '弹珠伤害 <b>×' + powerMul(k).toFixed(2) + '</b><br>' +
+          '<span class="dim">+' + rnd(POWER_STEP * k * 100) + '%　每级 +' +
+          rnd(POWER_STEP * 100) + '%</span>';
+        return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
     {
       id: 'overclock', name: '超频核心', icon: '⧗', color: '#38f0ff', maxLevel: 5,
-      brief: '缩短所有弹珠的攻击间隔',
+      brief: '每级提升 30% 攻速，满级 +150%',
       desc: function (lv) {
-        const f = (k) => '冷却 <b>×' + (1 / P18(k)).toFixed(2) + '</b>　（攻速 +' +
-          rnd((P18(k) - 1) * 100) + '%）';
+        const f = (k) => '攻击间隔 <b>×' + (1 / ocRate(k)).toFixed(2) + '</b><br>' +
+          '<span class="dim">攻速 +' + rnd(OC_STEP * k * 100) + '%　每级 +' +
+          rnd(OC_STEP * 100) + '%</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
     {
-      id: 'split', name: '多重射击', icon: '⋔', color: '#ffc93c', maxLevel: 5,
-      brief: '每级 +1 组子弹，但单发伤害 -10%',
+      id: 'split', name: '弹道散射', icon: '⋔', color: '#ffc93c', maxLevel: 5,
+      brief: '增加弹道数量：两侧弹体更小、伤害更低',
       desc: function (lv) {
-        const f = (k) => '子弹组 <b>' + (1 + k) + '</b> 组 · 单发伤害 <b>×' +
-          Math.pow(0.9, k).toFixed(2) + '</b>　（总输出 ×' +
-          ((1 + k) * Math.pow(0.9, k)).toFixed(2) + '）';
+        const f = (k) => {
+          const row = splitPattern(k);
+          const tot = row.reduce((a, b) => a + b, 0);
+          return '弹道 <b>' + row.length + '</b> 发<br>' +
+            row.map(pc).join('｜') + '<br>' +
+            '<span class="dim">总输出 ×' + tot.toFixed(2) + '　两侧弹体更小</span>';
+        };
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
     {
-      id: 'expand', name: '巨型弹药', icon: '◯', color: '#9dff3c', maxLevel: 5,
+      id: 'expand', name: '增量装药', icon: '◯', color: '#9dff3c', maxLevel: 5,
       brief: '扩大所有弹珠的作用范围半径（爆炸 / 领域 / 光束）',
       desc: function (lv) {
-        const f = (k) => '范围半径 <b>×' + (1 + k * 0.10).toFixed(2) + '</b>　（+' + k * 10 + '%）';
+        const f = (k) => '范围半径 <b>×' + (1 + k * 0.10).toFixed(2) + '</b><br>' +
+          '<span class="dim">+' + k * 10 + '%　每级 +10%</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
     {
       id: 'crit', name: '暴力算法', icon: '✹', color: '#ff3c3c', maxLevel: 5,
-      brief: '提高暴击几率与暴击伤害',
+      brief: '逐级提升暴击几率与暴击伤害（满级 75% · 275%）',
       desc: function (lv) {
-        const f = (k) => '暴击 <b>' + rnd(3 + k * 12) + '%</b> · 暴伤 <b>' + rnd(180 + k * 33) +
-          '%</b>　（期望 ' + pct(1 + (0.03 + k * 0.12) * (0.8 + k * 0.33)) + '）';
+        const f = (k) => '暴击 <b>' + pc(critChanceAt(k)) + '</b>　暴伤 <b>' + pc(critMulAt(k)) +
+          '</b><br><span class="dim">期望伤害 ' +
+          pct(1 + critChanceAt(k) * (critMulAt(k) - 1)) + '</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
     {
       id: 'plating', name: '装甲插板', icon: '▣', color: '#ff7a3d', maxLevel: 5,
-      brief: '提高生命上限，并立即回复等量生命',
+      brief: '提高生命上限，并立即回复 12 点生命',
       desc: function (lv) {
-        const f = (k) => '生命上限 <b>+' + k * 20 + '</b>';
+        const f = (k) => '生命上限 <b>+' + k * 12 + '</b><br>' +
+          '<span class="dim">每级 +12　立即回复 12 点</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -68,7 +92,8 @@
       id: 'nano', name: '纳米修复', icon: '✚', color: '#9dff3c', maxLevel: 5,
       brief: '按最大生命的百分比持续回复生命',
       desc: function (lv) {
-        const f = (k) => '每秒回复 <b>' + (k * 0.2).toFixed(2) + '%</b> 最大生命';
+        const f = (k) => '每秒回复 <b>' + (k * 0.2).toFixed(2) + '%</b> 最大生命<br>' +
+          '<span class="dim">每级 +0.20%</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -76,8 +101,8 @@
       id: 'thruster', name: '马赫推进', icon: '⋙', color: '#7af0ff', maxLevel: 5,
       brief: '提高移动速度',
       desc: function (lv) {
-        const f = (k) => '移速 <b>×' + Math.pow(1.10, k).toFixed(2) + '</b>　（+' +
-          rnd((Math.pow(1.10, k) - 1) * 100) + '%）';
+        const f = (k) => '移速 <b>×' + Math.pow(1.10, k).toFixed(2) + '</b><br>' +
+          '<span class="dim">+' + rnd((Math.pow(1.10, k) - 1) * 100) + '%　每级 +10%</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     },
@@ -85,7 +110,8 @@
       id: 'magnet', name: '数据磁场', icon: '◈', color: '#38f0ff', maxLevel: 5,
       brief: '扩大数据晶体的拾取范围',
       desc: function (lv) {
-        const f = (k) => '拾取范围 <b>×' + Math.pow(1.25, k).toFixed(2) + '</b>';
+        const f = (k) => '拾取范围 <b>×' + Math.pow(1.25, k).toFixed(2) + '</b><br>' +
+          '<span class="dim">每级 +25%</span>';
         return { cur: f(lv), next: lv < this.maxLevel ? f(lv + 1) : '已达最高等级' };
       }
     }
@@ -100,6 +126,17 @@
     PASSIVES: PASSIVES,
     passiveById: byId,
     MAX_WEAPONS: MAX_WEAPONS,
+
+    /* 数值表：player / weapons 等模块统一从这里取，避免多处硬编码 */
+    POWER_STEP: POWER_STEP,
+    OC_STEP: OC_STEP,
+    CRIT_C: CRIT_C,
+    CRIT_M: CRIT_M,
+    powerMul: powerMul,
+    ocRate: ocRate,
+    critChanceAt: critChanceAt,
+    critMulAt: critMulAt,
+    splitPattern: splitPattern,
 
     KIND_META: {
       new: {

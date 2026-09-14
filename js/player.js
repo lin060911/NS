@@ -5,7 +5,8 @@
   const TAU = Math.PI * 2;
 
   const BASE = {
-    dmgMul: 0, cdMul: 1, areaMul: 0, amount: 0
+    dmgMul: 0, cdMul: 1, areaMul: 0, amount: 0,
+    critChance: 0.15, critMul: 1.5
   };
 
   function recalc() {
@@ -21,17 +22,21 @@
     p.pickup = 115;
     p.regen = p.regenBonus || 0;
     p.armor = 0;
-    p.critChance = 0.03;
-    p.critMul = 1.8;
+    p.critChance = BASE.critChance;
+    p.critMul = BASE.critMul;
 
-    if (ps.power) p.dmgMul += Math.pow(1.18, ps.power) - 1;
-    if (ps.overclock) p.cdMul *= Math.pow(1 / 1.18, ps.overclock);
+    const UG = global.Upgrades;
+    if (ps.power) p.dmgMul += (UG ? UG.POWER_STEP : 0.3) * ps.power;
+    if (ps.overclock) p.cdMul *= 1 / (1 + (UG ? UG.OC_STEP : 0.2) * ps.overclock);
     if (ps.expand) p.areaMul += (BAL.AREA_PER_LV || 0.1) * ps.expand;
     if (ps.split) p.amount += ps.split;
     if (ps.thruster) p.speed *= Math.pow(1.10, ps.thruster);
     if (ps.plating) p.maxHpBase += 15 * ps.plating;
     if (ps.nano) p.regen += p.maxHpBase * 0.0015 * ps.nano;
-    if (ps.crit) { p.critChance += 0.12 * ps.crit; p.critMul += 0.33 * ps.crit; }
+    if (ps.crit) {
+      if (UG) { p.critChance = UG.critChanceAt(ps.crit); p.critMul = UG.critMulAt(ps.crit); }
+      else { p.critChance = 0.15 + 0.12 * ps.crit; p.critMul = 1.5 + 0.33 * ps.crit; }
+    }
     if (ps.magnet) p.pickup *= Math.pow(1.25, ps.magnet);
 
     if (p.dmgBonus) p.dmgMul += p.dmgBonus;
@@ -64,7 +69,6 @@
     if (ups > 0) {
       const before = this.maxHp;
       this.recalc();
-      /* 升级带来的生命上限提升只补一半，避免"升级即回血" */
       if (this.maxHp > before) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp - before) * 1);
     }
     return ups;
@@ -98,6 +102,7 @@
   function draw(ctx, G) {
     const p = this;
     const blink = p.invuln > 0 && Math.floor(G.time * 22) % 2 === 0;
+    const glo = !(global.FX && global.FX.lean);
 
     ctx.save();
     ctx.translate(p.x, p.y);
@@ -143,7 +148,7 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.shadowColor = col;
-    ctx.shadowBlur = 22;
+    ctx.shadowBlur = glo ? 22 : 0;
     ctx.fillStyle = 'rgba(8,20,40,.92)';
     ctx.beginPath();
     ctx.moveTo(0, -R);
@@ -156,7 +161,7 @@
 
     ctx.save();
     ctx.shadowColor = col;
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = glo ? 16 : 0;
     ctx.strokeStyle = col;
     ctx.lineJoin = 'round';
     ctx.lineWidth = 2.6;
@@ -208,7 +213,7 @@
         pickup: 115,
         regen: 0, regenBonus: 0,
         armor: 0,
-        critChance: 0.03, critMul: 1.8,
+        critChance: 0.15, critMul: 1.5,
         dmgMul: 0, cdMul: 1, areaMul: 0, amount: 0,
         invuln: 0, hurtFlash: 0,
         facing: -Math.PI / 2,

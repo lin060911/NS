@@ -9,7 +9,6 @@
   const Enemies = global.Enemies;
   const TAU = Math.PI * 2;
 
-  /* 领域配色：支持 #rgb / #rrggbb / #rrggbbaa，避免写死 fallback 把蓝色领域染成绿色 */
   function hexToRgb(hex) {
     let h = String(hex || '').replace('#', '').trim();
     if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
@@ -30,10 +29,11 @@
   function spiralKnife(G, s, def, i, n) {
     const p = P();
     const a = i / n * TAU + G.time * 1.4;
+    const mul = Weapons.shotMul(s, i), zs = Weapons.shotSize(s, i);
     Weapons.add({
       type: 'bolt', x: p.x, y: p.y,
       vx: Math.cos(a), vy: Math.sin(a),
-      r: 9, dmg: s.dmg, pierce: 99, hits: [],
+      r: 9 * zs, dmg: s.dmg * mul, pierce: 99, hits: [],
       effects: def.effects, color: def.color,
       shape: 'shuriken', spec: def.spec,
       spiral: true, ox: p.x, oy: p.y,
@@ -106,7 +106,9 @@
     while (w._volts.length < g) w._volts.push({ t: 0, cur: null, hit: [], a: Math.random() * TAU });
     while (w._volts.length > g) w._volts.pop();
 
-    for (const v of w._volts) {
+    for (let vi = 0; vi < w._volts.length; vi++) {
+      const v = w._volts[vi];
+      const vmul = Weapons.shotMul(s, vi);
       if (!v.cur || v.cur.dead || v.cur.hp <= 0) {
         const n = Enemies.nearest(p.x, p.y, Weapons.searchR(G), v.hit);
         if (!n) {
@@ -126,7 +128,7 @@
       const cur = v.cur;
       FX.bolt(p.x, p.y, cur.x, cur.y, def.color, 0.16, 18);
       const crit = G.rollCrit();
-      const final = s.dmg * (crit > 1 ? crit : 1);
+      const final = s.dmg * vmul * (crit > 1 ? crit : 1);
       Enemies.damage(G, cur, final, { angle: 0, knock: 12, crit: crit > 1, effects: def.effects });
       global.Effects.onHit(G, cur, def.effects, final);
       global.Effects.para(cur, 0.7);
@@ -166,7 +168,7 @@
         const dx = b.x - x, dy = b.y - y;
         if (dx * dx + dy * dy < clearR * clearR) {
           bl.splice(k, 1);
-          FX.burst(b.x, b.y, '#ffc93c', 3, { speed: 70, life: 0.3, size: 2.2 });
+          if (!FX.lean) FX.burst(b.x, b.y, '#ffc93c', 3, { speed: 70, life: 0.3, size: 2.2 });
         }
       }
       if (hit) {
@@ -264,12 +266,13 @@
       FX.burst(x, y, def.color, 26, { speed: 230, life: 0.55, size: 3.4 });
       FX.addFlash(0.12);
       FX.addShake(2.4);
+      const jm = Weapons.shotMul(s, i);
       const crit = G.rollCrit();
-      const direct = s.dmg * 2.4 * (crit > 1 ? crit : 1);
+      const direct = s.dmg * jm * 2.4 * (crit > 1 ? crit : 1);
       Enemies.damage(G, best, direct, { angle: 0, knock: 40, crit: crit > 1, effects: def.effects });
       global.Effects.onHit(G, best, def.effects, direct);
-      Weapons.explode(G, x, y, strikeR, s.dmg * 1.5, def.color, 40, def.effects, null);
-      Weapons.chainFrom(G, best, s.dmg * 0.85, 5, 280, def.effects, def.color, { para: 0.9 });
+      Weapons.explode(G, x, y, strikeR, s.dmg * jm * 1.5, def.color, 40, def.effects, null);
+      Weapons.chainFrom(G, best, s.dmg * jm * 0.85, 5, 280, def.effects, def.color, { para: 0.9 });
       global.Sfx.play('explode');
     }
   }
@@ -302,14 +305,15 @@
     const a = U.angle(p.x, p.y, tgt.x, tgt.y);
     for (let i = 0; i < s.groups; i++) {
       const aa = a + (i - (s.groups - 1) / 2) * 0.3;
+      const mul = Weapons.shotMul(s, i), zs = Weapons.shotSize(s, i);
       Weapons.add({
         type: 'grenade', x: p.x, y: p.y,
         vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-        r: 11, dmg: s.dmg * 0.6, pierce: 0, hits: [],
+        r: 11 * zs, dmg: s.dmg * mul * 0.6, pierce: 0, hits: [],
         effects: def.effects, color: def.color,
         shape: 'orb', spec: def.spec,
         splitInto: 5, splitMul: 0.16,
-        blastR: s.blastR * 1.15, life: 1.5, travel: 0, knock: 70
+        blastR: s.blastR * 1.15 * zs, life: 1.5, travel: 0, knock: 70
       });
     }
   }
@@ -319,11 +323,12 @@
     const n = s.groups;
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU;
+      const mul = Weapons.shotMul(s, i), zs = Weapons.shotSize(s, i);
       Weapons.add({
         type: 'seeker', x: p.x, y: p.y,
         vx: Math.cos(a) * 260, vy: Math.sin(a) * 260,
         speed: 520, turn: 5, target: null,
-        r: 7, dmg: s.dmg, pierce: 0, hits: [],
+        r: 7 * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
         effects: def.effects, color: def.color,
         shape: 'seeker', spec: def.spec,
         life: 3, travel: 0, knock: 30
@@ -350,13 +355,14 @@
     const a = U.angle(p.x, p.y, tgt.x, tgt.y);
     for (let i = 0; i < s.groups; i++) {
       const aa = a + (i - (s.groups - 1) / 2) * 0.26;
+      const mul = Weapons.shotMul(s, i), zs = Weapons.shotSize(s, i);
       Weapons.add({
         type: 'walker', x: p.x, y: p.y,
         vx: Math.cos(aa) * 250, vy: Math.sin(aa) * 250,
-        r: 7, dmg: s.dmg, pierce: 999, hits: [],
+        r: 7 * zs, dmg: s.dmg * mul, pierce: 999, hits: [],
         effects: def.effects, color: def.color,
         shape: 'bolt', spec: def.spec,
-        blastR: s.blastR,
+        blastR: s.blastR * zs,
         boomEvery: 0.16, boomMul: 0.34,
         life: 0.9, travel: 0, knock: 20
       });

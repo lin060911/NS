@@ -197,7 +197,7 @@
 
     ctx.rotate(e.face);
     ctx.shadowColor = col;
-    ctx.shadowBlur = flash ? 22 : 12;
+    ctx.shadowBlur = (global.FX && global.FX.lean) ? 0 : (flash ? 22 : 12);
     ctx.strokeStyle = col;
     ctx.lineWidth = 4;
     ctx.fillStyle = flash ? 'rgba(255,255,255,.85)' : 'rgba(10,14,30,.72)';
@@ -1264,7 +1264,9 @@
       }
       if (opts.slow) e.slowT = Math.max(e.slowT, opts.slow);
 
-      if (amount >= 1 && Math.random() < 0.22 && FX.texts.length < 30) {
+      /* 伤害数字：掉帧时先降频（lean），极低画质直接关闭 */
+      const dp = FX.minimal ? 0 : (FX.lean ? 0.10 : 0.22);
+      if (dp > 0 && amount >= 1 && Math.random() < dp && FX.texts.length < 30) {
         FX.text(e.x, e.y - e.r - 4, Math.round(amount), opts.crit ? '#ffd23c' : '#ffffff',
           { size: opts.crit ? 17 : 13, life: 0.6 });
       }
@@ -1299,8 +1301,10 @@
           c.ky = Math.sin(a) * 90;
           this.list.push(c);
         }
-        FX.ring(e.x, e.y, e.color, 6, e.r * 2.4, 0.3, 3);
-        FX.burst(e.x, e.y, e.color, 12, { speed: 190, life: 0.4, size: 2.4 });
+        if (!FX.lean) {
+          FX.ring(e.x, e.y, e.color, 6, e.r * 2.4, 0.3, 3);
+          FX.burst(e.x, e.y, e.color, 12, { speed: 190, life: 0.4, size: 2.4 });
+        }
       }
 
       const healChance = e.isBoss ? 1 : (e.elite ? 0.02 : 0.0026);
@@ -1311,12 +1315,17 @@
 
       if (G.onEnemyKilled) G.onEnemyKilled(e);
 
-      FX.burst(e.x, e.y, e.color, e.isBoss ? 60 : 9, {
-        speed: e.isBoss ? 320 : 170,
-        life: e.isBoss ? 0.9 : 0.45,
-        size: e.isBoss ? 4 : 2.6
-      });
-      FX.ring(e.x, e.y, e.color, e.r * 0.6, e.r * 2.6, 0.34, e.isBoss ? 5 : 2);
+      /* 掉帧时直接砍掉击杀粒子/光环 —— 信息量最低、数量最多，先让位给帧率
+         （领主、精英的死亡反馈保留，避免丢失关键节奏点） */
+      const keepFx = !FX.lean || e.isBoss || e.elite;
+      if (keepFx) {
+        FX.burst(e.x, e.y, e.color, e.isBoss ? 60 : 9, {
+          speed: e.isBoss ? 320 : 170,
+          life: e.isBoss ? 0.9 : 0.45,
+          size: e.isBoss ? 4 : 2.6
+        });
+        FX.ring(e.x, e.y, e.color, e.r * 0.6, e.r * 2.6, 0.34, e.isBoss ? 5 : 2);
+      }
 
       if (e.isBoss) {
         G.onBossDown(e);

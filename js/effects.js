@@ -17,8 +17,10 @@
         if (e.frostStack >= need) {
           e.frostStack = 0;
           if (!e.isBoss) e.frozen = Math.max(e.frozen || 0, 1.0 + pw * 1.4);
-          fx().ring(e.x, e.y, '#7ad7ff', 4, e.r * 3.2, 0.32, 3);
-          fx().burst(e.x, e.y, '#7ad7ff', 8, { speed: 95, life: 0.42, size: 2.4 });
+          if (!fx().lean) {
+            fx().ring(e.x, e.y, '#7ad7ff', 4, e.r * 3.2, 0.32, 3);
+            fx().burst(e.x, e.y, '#7ad7ff', 8, { speed: 95, life: 0.42, size: 2.4 });
+          }
         }
       },
       stateMul(e) { return e.frozen > 0 ? 1.25 : 1; }
@@ -95,14 +97,14 @@
       if (e.frozen > 0) {
         e.frozen -= dt;
         stop = true;
-        if (Math.random() < dt * 4) {
+        if (!fx().lean && Math.random() < dt * 4) {
           fx().burst(e.x, e.y, '#7ad7ff', 1, { speed: 14, life: 0.5, size: 1.8 });
         }
       }
       if (e.paralyze > 0) {
         e.paralyze -= dt;
         stop = true;
-        if (Math.random() < dt * 6) {
+        if (!fx().lean && Math.random() < dt * 6) {
           fx().burst(e.x, e.y, '#ffe14d', 1, { speed: 20, life: 0.3, size: 1.6 });
         }
       }
@@ -115,7 +117,7 @@
       if (e.dot && e.dotT > 0) {
         e.dotT -= dt;
         E().damage(G, e, e.dot * dt, { silent: true });
-        if (Math.random() < dt * 6) {
+        if (!fx().lean && Math.random() < dt * 6) {
           fx().burst(e.x, e.y, '#9dff3c', 1, { speed: 20, life: 0.4, size: 2 });
         }
         if (e.dotT <= 0) { e.dot = 0; e.dotT = 0; }
@@ -124,7 +126,7 @@
       if (e.burn && e.burn.t > 0) {
         e.burn.t -= dt;
         E().damage(G, e, e.burn.dps * dt, { silent: true });
-        if (Math.random() < dt * 7) {
+        if (!fx().lean && Math.random() < dt * 7) {
           fx().burst(e.x, e.y, '#ff5a2d', 1, { speed: 34, life: 0.36, size: 2.2 });
         }
         if (e.burn.t <= 0) e.burn = null;
@@ -133,7 +135,7 @@
       if (e.venomStack > 0) {
         e.venomT -= dt;
         E().damage(G, e, e.maxHp * 0.0025 * e.venomStack * dt, { silent: true });
-        if (Math.random() < dt * 3) {
+        if (!fx().lean && Math.random() < dt * 3) {
           fx().burst(e.x, e.y, '#9dff3c', 1, { speed: 18, life: 0.45, size: 2 });
         }
         if (e.venomT <= 0) { e.venomStack = 0; e.venomT = 0; }

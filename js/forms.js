@@ -63,10 +63,11 @@
         const n = W().shotCount(s.count || 1);
         for (let i = 0; i < n; i++) {
           const aa = a + (i - (n - 1) / 2) * 0.13;
+          const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
           W().add({
             type: 'bolt', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: (DEF.spec && DEF.spec.r) || 6, dmg: s.dmg,
+            r: ((DEF.spec && DEF.spec.r) || 6) * zs, dmg: s.dmg * mul,
             pierce: s.pierce, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'bolt',
@@ -90,10 +91,11 @@
         const n = W().shotCount(s.count || 1);
         for (let i = 0; i < n; i++) {
           const aa = a + (i - (n - 1) / 2) * 0.2;
+          const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
           W().add({
             type: 'shard', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: (DEF.spec && DEF.spec.r) || 8, dmg: s.dmg, pierce: 0, hits: [],
+            r: ((DEF.spec && DEF.spec.r) || 8) * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: 'snow', spec: DEF.spec,
             life: 2.2, travel: 0, knock: s.knock
@@ -114,17 +116,18 @@
         const res = residualFor(DEF, s);
         for (let i = 0; i < n; i++) {
           const aa = a + (i - (n - 1) / 2) * 0.34;
+          const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
           W().add({
             type: 'grenade', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: 9, dmg: s.dmg, pierce: 0, hits: [],
+            r: 9 * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'orb',
             trail: DEF.spec && DEF.spec.trail,
             spec: DEF.spec,
             splitInto: DEF.spec && DEF.spec.splitInto,
             splitMul: DEF.spec && DEF.spec.splitMul,
-            blastR: s.blastR, life: (DEF.spec && DEF.spec.life) || 1.4,
+            blastR: s.blastR * zs, life: (DEF.spec && DEF.spec.life) || 1.4,
             travel: 0, knock: s.knock,
             residual: res
           });
@@ -144,10 +147,11 @@
         const n = W().shotCount(s.count || 1);
         for (let i = 0; i < n; i++) {
           const aa = a + (i - (n - 1) / 2) * 0.42;
+          const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
           W().add({
             type: 'dart', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: (DEF.spec && DEF.spec.r) || 10, dmg: s.dmg, pierce: 0, hits: [],
+            r: ((DEF.spec && DEF.spec.r) || 10) * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'spore',
             spec: DEF.spec,
@@ -168,6 +172,7 @@
         global.Sfx.play('chain');
         for (let c = 0; c < n && first; c++) {
           const hit = [];
+          const cmul = W().shotMul(s, c);
           let cx = p.x, cy = p.y, cur = first;
           const jumps = s.jumps || 3;
           for (let j = 0; j < jumps; j++) {
@@ -175,7 +180,7 @@
             hit.push(cur);
             global.FX.bolt(cx, cy, cur.x, cur.y, DEF.color, 0.18, 20);
             const crit = G.rollCrit();
-            const final = s.dmg * (crit > 1 ? crit : 1);
+            const final = s.dmg * cmul * (crit > 1 ? crit : 1);
             E().damage(G, cur, final, {
               angle: U.angle(cx, cy, cur.x, cur.y), knock: s.knock,
               crit: crit > 1, effects: DEF.effects
@@ -200,11 +205,12 @@
         const n = W().shotCount(s.count || 1);
         for (let i = 0; i < n; i++) {
           const a = Math.random() * TAU;
+          const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
           W().add({
             type: 'seeker', x: p.x, y: p.y,
             vx: Math.cos(a) * s.speed * 0.4, vy: Math.sin(a) * s.speed * 0.4,
             speed: s.speed, turn: (DEF.spec && DEF.spec.turn) || 4.2, target: null,
-            r: (DEF.spec && DEF.spec.r) || 7, dmg: s.dmg,
+            r: ((DEF.spec && DEF.spec.r) || 7) * zs, dmg: s.dmg * mul,
             pierce: s.pierce || 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'seeker',
@@ -228,14 +234,16 @@
         const n = W().shotCount(s.count || 1);
         for (let i = 0; i < n; i++) {
           const aa = a + (i - (n - 1) / 2) * 0.3;
+          const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
+          const w = (s.width || 14) * zs, dm = s.dmg * mul;
           W().add({
             type: 'beam', x: p.x, y: p.y, a: aa,
-            w: s.width || 14, len: s.len || 620, dmg: s.dmg,
+            w: w, len: s.len || 620, dmg: dm,
             effects: DEF.effects, color: DEF.color, spec: DEF.spec,
             life: beamLife(s.cd), max: beamLife(s.cd), travel: 0, hits: [],
             vx: Math.cos(aa), vy: Math.sin(aa), r: 0, pierce: 999
           });
-          W().beamHit(G, p.x, p.y, aa, s.len, s.width, s.dmg, DEF, s.knock);
+          W().beamHit(G, p.x, p.y, aa, s.len || 620, w, dm, DEF, s.knock);
         }
       }
     }

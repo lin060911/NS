@@ -27,18 +27,7 @@
     return m + ':' + String(s % 60).padStart(2, '0');
   }
 
-    const BOSS_DPS = {
-      's15':134538, 's16':106529, 's14':102221, 's23':63618, 's19':57203, 's07':52935,
-      's18':47551, 's02':45157, 's17':38462, 's06':36309, 's05':36224, 's04':28224,
-      's13':26943, 's09':26039, 's12':20058, 's22':17393, 's03':15091, 's01':15022,
-      's11':14220, 'a22':13615, 's20':12125, 's21':12089, 's10':10277, 's08':9106,
-      'a28':8047, 'a25':6335, 'a27':5613, 'a23':4649, 'a19':4234, 'a18':3885,
-      'a26':3424, 'a16':3333, 'a15':3097, 'a14':2994, 'a13':2742, 'a05':2692,
-      'a24':2400, 'a17':2335, 'a21':2260, 'a06':1804, 'a08':1765, 'a12':1487,
-      'a07':1486, 'a11':1392, 'a10':1348, 'a01':1272, 'a02':1237, 'a20':1081,
-      'a03':901, 'a09':867, 'a04':631, 'spore':373, 'blast':341, 'crystal':333,
-      'chain':333, 'ray':222, 'seek':161, 'pierce':130
-    };
+  const POWER_TIER_K = { 1: 1.5, 2: 5.0, 3: 15.5 };
 
   const Saves = {
     MAX: MAX,
@@ -71,9 +60,7 @@
       for (const w of P.weapons) {
         const d = global.Weapons.defs[w.id];
         if (!d) continue;
-        const full = BOSS_DPS[w.id];
-        const per = full === undefined ? d.baseDps * 8 : full / d.maxLevel;
-        s += per * w.level;
+        s += d.baseDps * (POWER_TIER_K[d.tier] || 3) * w.level;
       }
       const ps = P.passives || {};
       s *= 1 + (P.dmgMul || 0) + (ps.power || 0) * 0.12 + (ps.crit || 0) * 0.05;

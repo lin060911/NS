@@ -279,14 +279,14 @@
   }
 
   const DEFS = {
-    'metalstorm':  make('metalstorm',  '飞刃龙卷', '◆', '#c8d2e8', 70, '持续 4.5 秒的飞刃风暴环绕自身，绞杀周围一切', metalCyclone),
-    'saturation':  make('saturation',  '地毯轰炸', '◉', '#ff8a3d', 75, '持续 4 秒全屏轰炸，结束时中心大爆轰', carpetBomb),
-    'annihilate':  make('annihilate',  '湮灭射线', '═', '#ff3ec8', 65, '持续 4 秒三道旋转光束扫射全场', annihilation),
-    'satellite':   make('satellite',   '轨道炮幕', '➤', '#ffc93c', 60, '持续 5 秒，卫星消解弹幕并齐射导弹', orbitalBarrage),
-    'deepwinter':  make('deepwinter',  '绝对零度', '❄', '#7ad7ff', 80, '全场冻结 4.2 秒，解冻瞬间碎裂爆伤', absoluteZero),
-    'decay':       make('decay',       '瘟疫爆发', '☣', '#9dff3c', 70, '持续 5 秒剧毒领域，全场叠毒腐蚀', plagueBurst),
-    'judgement':   make('judgement',   '天罚雷暴', '≶', '#ffe14d', 85, '持续 4.5 秒全屏落雷，劈中者麻痹', thunderStorm),
-    'singularity': make('singularity', '奇点坍缩', '◍', '#9b6bff', 90, '张开黑洞吸附全场 4 秒，随后坍缩爆轰', singularityCollapse)
+    'metalstorm':  make('metalstorm',  '飞刃龙卷', '🌀', '#c8d2e8', 70, '持续 4.5 秒的飞刃风暴环绕自身，绞杀周围一切', metalCyclone),
+    'saturation':  make('saturation',  '地毯轰炸', '💣', '#ff8a3d', 75, '持续 4 秒全屏轰炸，结束时中心大爆轰', carpetBomb),
+    'annihilate':  make('annihilate',  '湮灭射线', '👾', '#ff3ec8', 65, '持续 4 秒三道旋转光束扫射全场', annihilation),
+    'satellite':   make('satellite',   '轨道炮幕', '🌐', '#ffc93c', 60, '持续 5 秒，卫星消解弹幕并齐射导弹', orbitalBarrage),
+    'deepwinter':  make('deepwinter',  '绝对零度', '❄️', '#7ad7ff', 80, '全场冻结 4.2 秒，解冻瞬间碎裂爆伤', absoluteZero),
+    'decay':       make('decay',       '瘟疫爆发', '☣️', '#9dff3c', 70, '持续 5 秒剧毒领域，全场叠毒腐蚀', plagueBurst),
+    'judgement':   make('judgement',   '天罚雷暴', '⚡', '#ffe14d', 85, '持续 4.5 秒全屏落雷，劈中者麻痹', thunderStorm),
+    'singularity': make('singularity', '奇点坍缩', '🕳️', '#9b6bff', 90, '张开黑洞吸附全场 4 秒，随后坍缩爆轰', singularityCollapse)
   };
 
   const Abilities = {

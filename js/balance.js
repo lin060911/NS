@@ -15,9 +15,9 @@
     SPAWN_ENDLESS_GROW: 0.022,
 
     /* 敌人密度倍率：整体刷怪量提升，难度上升 */
-    SPAWN_MUL: 1.25,
+    SPAWN_MUL: 1.3,
     /* 升级经验需求倍率：与密度同步提升，保证升级节奏不变 */
-    XP_NEED_MUL: 1.25,
+    XP_NEED_MUL: 1.5,
 
     HP_SCALE: 8,
     HP_GROW: 1.10,

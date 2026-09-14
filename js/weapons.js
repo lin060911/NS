@@ -8,14 +8,22 @@
   const BAL = global.BAL;
   const TAU = Math.PI * 2;
 
-  const TIER_COUNT = { 1: 1, 2: 1, 3: 1 };
 
   const K = 0.5505;
   const TIER_SCALE = { 1: K, 2: K * 0.568, 3: K * 0.1406 };
 
-  /* 统一索敌半径：所有「发射型」武器只在 400px 内锁定目标。
-     领域 / 光环类（fieldAura、卫星环绕等）走自己的作用半径，不受此限制。 */
   const SEARCH_R = 600;
+
+  const SPLIT_PATTERN = [
+    [1],
+    [0.25, 1, 0.25],
+    [0.50, 1, 0.50],
+    [0.75, 1, 0.75],
+    [0.25, 0.75, 1, 0.75, 0.25],
+    [0.50, 0.75, 1, 0.75, 0.50]
+  ];
+  const SPLIT_SIZE = SPLIT_PATTERN.map(
+    (row) => row.map((m) => Math.round((0.58 + 0.42 * m) * 1000) / 1000));
 
   function hexRgb(hex) {
     const h = String(hex).replace('#', '');
@@ -46,11 +54,20 @@
 
     searchR() { return SEARCH_R; },
 
-    /* 领域 / 光环类专用：这类武器不依赖索敌，保留自身作用半径 */
-    auraR(r) { return r; },
-
     shotCount(c) {
       return Math.max(1, Math.round(c || 1));
+    },
+
+    SPLIT_PATTERN: SPLIT_PATTERN,
+    SPLIT_SIZE: SPLIT_SIZE,
+
+    shotMul(s, i) {
+      const row = s && s.shotMul;
+      return (row && row[i] !== undefined) ? row[i] : 1;
+    },
+    shotSize(s, i) {
+      const row = s && s.shotSize;
+      return (row && row[i] !== undefined) ? row[i] : 1;
     },
 
     GEO_K: 1.12,
@@ -61,20 +78,24 @@
       const n = U.clamp((lv - r.min) / Math.max(1, r.max - r.min), 0, 1);
       const geo = Math.pow(this.GEO_K, Math.max(0, lv - r.min));
       const sp = def.spec || {};
-      const groups = Math.max(1, Math.round(1 + (P.amount || 0)));
+      const splitLv = U.clamp(Math.round(P.amount || 0), 0, SPLIT_PATTERN.length - 1);
+      const pat = SPLIT_PATTERN[splitLv];
+      const groups = pat.length;
 
       const s = {
         dmg: def.baseDps * lv * def.baseCd / def.baseCount * (1 + P.dmgMul),
         cd: def.baseCd * P.cdMul,
         groups: groups,
         count: groups,
+        splitLv: splitLv,
+        shotMul: pat,
+        shotSize: SPLIT_SIZE[splitLv],
         pierce: 0,
         knock: 0
       };
 
       if (F && F.solo) s.dmg *= 1.35;
       if (sp.dmgMul) s.dmg *= sp.dmgMul;
-      s.dmg *= Math.pow(0.9, groups - 1);
 
       switch (def.form) {
         case 'pierce':
@@ -101,12 +122,6 @@
       }
       if (sp.speedMul) s.speed *= sp.speedMul;
       return s;
-    },
-
-    effectList(def, lv) {
-      if (!def.effectIds || !def.effectIds.length) return null;
-      const pw = Effects.power(lv, global.TIER_RANGE[def.tier].max);
-      return def.effectIds.map(id => ({ id: id, pw: pw }));
     },
 
     fire(G, w, dt) {
@@ -231,7 +246,7 @@
         effects: b.effects
       });
       Effects.onHit(G, e, b.effects, final);
-      if (Math.random() < 0.28) {
+      if (!FX.lean && Math.random() < 0.28) {
         FX.burst(e.x, e.y, b.color, 2, { speed: 70, life: 0.24, size: 1.8 });
       }
       return e.hp <= 0;
@@ -255,7 +270,7 @@
       }
       global.Sfx.play('explode');
       FX.ring(x, y, color, radius * 0.25, radius, 0.34, 4);
-      FX.burst(x, y, color, 8, { speed: 200, life: 0.4, size: 2.6 });
+      if (!FX.lean) FX.burst(x, y, color, 8, { speed: 200, life: 0.4, size: 2.6 });
       FX.addShake(1.6);
     },
 
@@ -305,7 +320,7 @@
         const c = C[i];
         c.t += dt;
         if (c.t >= c.life) { C.splice(i, 1); continue; }
-        if (Math.random() < dt * 2.5) {
+        if (!FX.lean && Math.random() < dt * 2.5) {
           FX.burst(c.x + (Math.random() - 0.5) * c.r, c.y + (Math.random() - 0.5) * c.r,
             c.color || '#9dff3c', 1, { speed: 16, life: 0.6, size: 2.4 });
         }
@@ -404,7 +419,7 @@
             b.vx = Math.cos(na) * b.speed;
             b.vy = Math.sin(na) * b.speed;
           }
-          if (Math.random() < 0.2) {
+          if (!FX.lean && Math.random() < 0.2) {
             FX.burst(b.x, b.y, b.color, 1, { speed: 22, life: 0.28, size: 2, drag: 4 });
           }
         }
@@ -422,7 +437,7 @@
               b.color, 18, b.effects, b.spec);
           }
         }
-        if (b.trail && Math.random() < 0.32) {
+        if (b.trail && !FX.lean && Math.random() < 0.32) {
           FX.burst(b.x, b.y, b.trail, 1,
             { speed: b.trail === '#ff5a2d' ? 60 : 26, life: b.trail === '#ff5a2d' ? 0.36 : 0.28, size: b.trail === '#ff5a2d' ? 3 : 2.2, drag: 3 });
         }
@@ -693,7 +708,7 @@
     const def = {
       baseDps: cfg.dps * (TIER_SCALE[tier] || 1),
       baseCd: cfg.cd,
-      baseCount: TIER_COUNT[tier] || 1,
+      baseCount: 1,
       id: cfg.id,
       name: cfg.name,
       form: cfg.form,
@@ -722,18 +737,21 @@
         const txt = (x) => {
           const fn = (v) => Math.abs(v - Math.round(v)) < 0.005
             ? String(Math.round(v)) : v.toFixed(2);
-          const parts = ['伤害 <b>' + Math.round(x.dmg) + '</b>'];
-          if (x.count > 1.001) parts.push('组数 <b>' + fn(x.count) + '</b>');
-          if (x.pierce) parts.push('穿透 <b>' + (x.pierce + 1) + '</b>');
-          if (x.blastR) parts.push('爆炸 <b>' + Math.round(x.blastR) + '</b>');
-          if (x.radius) parts.push('范围 <b>' + Math.round(x.radius) + '</b>');
-          if (x.jumps) parts.push('连锁 <b>' + x.jumps + '</b>');
+          const head = ['伤害 <b>' + Math.round(x.dmg) + '</b>'];
+          const rest = [];
+          if (x.count > 1.001) rest.push('弹道 <b>' + fn(x.count) + '</b>');
+          if (x.pierce) rest.push('穿透 <b>' + (x.pierce + 1) + '</b>');
+          if (x.blastR) rest.push('爆炸 <b>' + Math.round(x.blastR) + '</b>');
+          if (x.radius) rest.push('范围 <b>' + Math.round(x.radius) + '</b>');
+          if (x.jumps) rest.push('连锁 <b>' + x.jumps + '</b>');
           const F = global.FORMS[this.form];
-          if (F && F.solo) parts.push('单体');
+          if (F && F.solo) rest.push('单体');
           else if (this.form === 'blast') {
-            parts.push(this.effectIds.length ? '范围残留' : '范围爆炸');
-          } else if (this.form === 'ray') parts.push('贯穿');
-          return parts.join(' · ');
+            rest.push(this.effectIds.length ? '范围残留' : '范围爆炸');
+          } else if (this.form === 'ray') rest.push('贯穿');
+          return rest.length
+            ? head[0] + '<br><span class="dim">' + rest.join(' · ') + '</span>'
+            : head[0];
         };
         return {
           cur: txt(s),

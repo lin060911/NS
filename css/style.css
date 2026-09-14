@@ -498,7 +498,9 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 .card .c-row { display: flex; align-items: baseline; gap: 10px; }
 .card .c-row + .c-row { margin-top: 3px; }
 .card .ck { flex: none; width: 40px; font-size: 10.5px; color: var(--dim); }
-.card .cv { flex: 1; }
+.card .cv { flex: 1; line-height: 1.65; }
+.card .cv .dim { color: var(--dim); font-weight: 400; }
+.card .c-desc .dim { color: var(--dim); }
 .card .c-row.next .ck { color: var(--cyan); }
 .card .c-row.next .cv { color: #eef1f6; font-weight: 600; }
 
