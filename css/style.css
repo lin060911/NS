@@ -266,9 +266,9 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 }
 /* 领主挑战 · 橙 */
 .btn.rush {
-  --fill: rgba(234, 143, 74, .24); --fill-h: rgba(234, 143, 74, .36);
-  --bc: rgba(242, 199, 154, .6); --bch: var(--c-orange);
-  --fg: #f9e0cb; --ac: var(--c-orange);
+  --fill: rgba(235, 50, 50, 0.24); --fill-h: rgba(252, 53, 53, 0.36);
+  --bc: rgba(236, 136, 136, 0.6); --bch: var(--c-orange);
+  --fg: #f9cbcb; --ac: var(--c-orange);
 }
 /* 危险 / 放弃 · 玫红 */
 .btn.danger {
@@ -290,9 +290,9 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   --fg: #e2f7e5; --ac: #7fe08f;
 }
 #btnBossRush { /* 橙 · 领主挑战 */
-  --fill: rgba(248, 129, 93, .26); --fill-h: rgba(248, 129, 93, .38);
-  --bc: rgba(242, 199, 154, .6); --bch: #f2c79a;
-  --fg: #fbdccb; --ac: #f8815d;
+  --fill: rgba(248, 93, 93, 0.26); --fill-h: rgba(248, 93, 93, 0.38);
+  --bc: rgba(242, 154, 154, 0.6); --bch:rgb(242, 154, 154)a;
+  --fg: #fbcbcb; --ac: #f85d5d;
 }
 #btnSavesManage { /* 蓝 —— 存档屏的「编辑 / 返回挑战」切换键 */
   --fill: rgba(103, 179, 241, .2); --fill-h: rgba(103, 179, 241, .32);
