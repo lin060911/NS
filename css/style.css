@@ -862,6 +862,20 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
 }
 .build-row b { font-weight: 600; }
 .bdim { margin-left: auto; font-size: 11px; color: var(--dim); white-space: nowrap; }
+
+/* 共享池被动（火控协议）：汇总行 + 成员子行 */
+.build-row.pool {
+  background: linear-gradient(180deg, rgba(94, 201, 221, .13), rgba(94, 201, 221, .03));
+  border: 1px solid rgba(94, 201, 221, .34);
+  border-radius: var(--r-xs);
+  padding: 7px 9px; margin: 2px 0 3px;
+}
+.build-row.pool .bdim { color: var(--cyan); }
+.build-row.pool .bdim b { color: #eef1f6; font-family: var(--mono); }
+.build-row.sub { padding-left: 18px; color: #b9c3d4; }
+.build-row.sub::before {
+  content: "└"; flex: none; margin-right: 2px; color: rgba(255, 255, 255, .28);
+}
 .build-note {
   font-size: 12.5px; line-height: 1.85; color: #a3aec3;
   padding: 11px 13px; border-radius: var(--r-sm); margin-bottom: 12px;
@@ -964,6 +978,19 @@ canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: 
   padding: 5px; border: 2px solid rgba(94, 201, 221, .38); border-radius: var(--r-xs);
   background: linear-gradient(180deg, rgba(94, 201, 221, .14), rgba(94, 201, 221, .04));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+.sv-go.locked {
+  color: #e08fa0; border-color: rgba(224, 143, 160, .34);
+  background: linear-gradient(180deg, rgba(224, 143, 160, .12), rgba(224, 143, 160, .03));
+}
+/* 旧版本存档：数值超出共享池上限，保留数据但不可使用 */
+.sv-item.legacy { border-color: rgba(224, 143, 160, .30); opacity: .82; }
+.sv-item.legacy .sv-head .sv-name { color: #d9a3ad; }
+.sv-legacy {
+  margin-top: 6px; font-size: 11px; line-height: 1.6; color: #e08fa0;
+  padding: 5px 8px; border-radius: var(--r-xs);
+  background: linear-gradient(180deg, rgba(224, 143, 160, .12), rgba(224, 143, 160, .03));
+  border: 1px solid rgba(224, 143, 160, .30);
 }
 
 .name-input {

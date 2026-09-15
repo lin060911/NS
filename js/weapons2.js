@@ -64,7 +64,7 @@
     if (w._fAcc >= 0.25) {
       w._fAcc = 0;
       const list = Enemies.near(p.x, p.y, r);
-      const dmg = s.dmg * (opt.dmgK || 0.5) * g * 0.25;
+      const dmg = s.dmg * (opt.dmgK || 0.5) * Weapons.sumShotMul(s) * 0.25;
       for (const e of list) {
         if (e.dead || e.hp <= 0) continue;
         if (U.dist2(p.x, p.y, e.x, e.y) > r * r) continue;
@@ -179,7 +179,7 @@
           const rr = hitR + e.r;
           if (dx * dx + dy * dy > rr * rr) continue;
           const crit = G.rollCrit();
-          const final = s.dmg * 0.05 * (crit > 1 ? crit : 1);
+          const final = s.dmg * 0.05 * Weapons.shotMul(s, i % g) * (crit > 1 ? crit : 1);
           Enemies.damage(G, e, final, { angle: a, knock: 20, crit: crit > 1, effects: def.effects });
           global.Effects.onHit(G, e, def.effects, final);
         }
@@ -192,7 +192,7 @@
           type: 'seeker', x: p.x, y: p.y,
           vx: Math.cos(a) * 320, vy: Math.sin(a) * 320,
           speed: 660, turn: 6.4, target: null,
-          r: 9, dmg: s.dmg * g / n * 2.8, pierce: 0, hits: [],
+          r: 9, dmg: s.dmg * Weapons.shotMul(s, i % g) * g / n * 2.8, pierce: 0, hits: [],
           effects: def.effects, color: def.color,
           shape: 'missile', trail: '#ffc93c',
           spec: def.spec, blastR: BAL.area(92),
@@ -289,7 +289,7 @@
       const life = 2.2;
       Weapons.addCloud({
         x: x, y: y, r: r, life: life,
-        dps: s.dmg * 0.42 * g, effects: def.effects,
+        dps: s.dmg * 0.42 * Weapons.sumShotMul(s), effects: def.effects,
         pull: 1, color: def.color, bossPull: 0
       });
       FX.ring(x, y, def.color, 8, r, 0.5, 5);
@@ -417,7 +417,7 @@
       spec: {}, update: voltUpdate },
     { id: 'a23', name: '冰霜领域', form: 'crystal', cd: 1.0, dps: 300, effects: ['frost'], icon: '❄', color: '#7ad7ff', brief: '身边减速圈，叠满冻结并易伤',
       spec: {}, aura: function (G, w, dt, def) {
-        fieldAura(G, w, dt, def, { r: 136, rGrow: 0.10, cycle: 8, vuln: 0.35, vulnGrow: 0.025, bossVuln: 0.20, slow: 1, dot: 0.35, dmgK: 0.5 });
+        fieldAura(G, w, dt, def, { r: 250, rGrow: 0.10, cycle: 8, vuln: 0.35, vulnGrow: 0.025, bossVuln: 0.20, slow: 1, dot: 0.35, dmgK: 0.5 });
       }, auraOnly: true, drawFx: function (ctx, G, w) { drawField(ctx, G, w, '#7ad7ff'); } },
     { id: 'a24', name: '极寒病毒', form: 'crystal', cd: 1.0, dps: 330, effects: ['frost', 'venom'], icon: '❄', color: '#7ad7ff', brief: '易伤并持续扣血',
       spec: { vuln: [0.30, 0.15], dot: 0.8, dotT: 3, hitFx: true } },
@@ -527,9 +527,11 @@ def.baseCd = c.cd;
         if (w._bt > 0) return;
         w._bt = step;
         const n = s.groups * 2;
-        const per = s.dmg * step / s.cd / n;
+        const per = s.dmg * step / s.cd / 2;
         for (let i = 0; i < n; i++) {
-          Weapons.beamHit(G, p.x, p.y, w._ba + i / n * TAU, s.len, s.width, per, this, 0);
+          /* 每 2 条光束共享一个散射档位：i>>1 即组号 */
+          Weapons.beamHit(G, p.x, p.y, w._ba + i / n * TAU, s.len, s.width,
+            per * Weapons.shotMul(s, i >> 1), this, 0);
         }
       };
       def.drawFx = function (ctx, G, w, def) {

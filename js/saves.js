@@ -55,6 +55,23 @@
       if (s) { s.name = name; write(l); }
     },
 
+    /* 旧版存档兼容：火控协议池化前，超频与散射可各自点满，
+       合计可能超过池上限（5）。这类存档原样保留数值，但标记为不可使用。 */
+    legacyReason(rec) {
+      const ps = (rec && rec.passives) || {};
+      const UG = global.Upgrades;
+      if (!UG || !UG.POOLS) return null;
+      for (const k in UG.POOLS) {
+        const pool = UG.POOLS[k];
+        let n = 0;
+        for (let i = 0; i < pool.members.length; i++) n += (ps[pool.members[i]] || 0);
+        if (n > pool.cap) {
+          return '旧版本存档，请删除（' + pool.name + ' 已投 ' + n + ' 级，上限 ' + pool.cap + '）';
+        }
+      }
+      return null;
+    },
+
     powerIndex(P) {
       let s = 0;
       for (const w of P.weapons) {

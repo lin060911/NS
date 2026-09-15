@@ -14,13 +14,16 @@
 
   const SEARCH_R = 600;
 
+  /* 散射协议（原弹道散射）数值表
+     外侧小弹系数已上调，用于补偿「散射打不满」的损耗。
+     总输出：1.00 / 1.50 / 1.80 / 2.20 / 2.60 / 3.10 */
   const SPLIT_PATTERN = [
     [1],
     [0.25, 1, 0.25],
-    [0.50, 1, 0.50],
-    [0.75, 1, 0.75],
-    [0.25, 0.75, 1, 0.75, 0.25],
-    [0.50, 0.75, 1, 0.75, 0.50]
+    [0.40, 1, 0.40],
+    [0.30, 0.30, 1, 0.30, 0.30],
+    [0.40, 0.40, 1, 0.40, 0.40],
+    [0.35, 0.35, 0.35, 1, 0.35, 0.35, 0.35]
   ];
   const SPLIT_SIZE = SPLIT_PATTERN.map(
     (row) => row.map((m) => Math.round((0.58 + 0.42 * m) * 1000) / 1000));
@@ -68,6 +71,15 @@
     shotSize(s, i) {
       const row = s && s.shotSize;
       return (row && row[i] !== undefined) ? row[i] : 1;
+    },
+    /* 散射总系数：Σ shotMul —— 自定义弹道用它替代 groups 做伤害缩放，
+       散射为 0 时恒等于 1，行为与旧版完全一致。 */
+    sumShotMul(s) {
+      const row = s && s.shotMul;
+      if (!row || !row.length) return 1;
+      let t = 0;
+      for (let i = 0; i < row.length; i++) t += row[i];
+      return t;
     },
 
     GEO_K: 1.12,
@@ -698,6 +710,31 @@
 
   const FUSED_TINT = { 1: 0, 2: 0.16, 3: 0.3 };
 
+  /* 元素强度档位：B / A / S 阶 = 0.45 / 0.75 / 1.00
+     低阶弹珠拿到满级强度会过强，这里按阶位压一档。 */
+  const EFFECT_PW = { 1: 0.45, 2: 0.75, 3: 1.00 };
+
+  /* spec 已实现的效果不再由 effects 重复触发 ——
+     避免「spec.freeze + frost 叠层」双冻结、
+          「spec.para/chainOnHit + shock 传导」双麻痹双连锁。
+     只保留 effects 独有的叠层机制（frost 减速叠层、venom 降抗、shock 传导）。 */
+  function specCovers(spec, id) {
+    if (!spec) return false;
+    if (id === 'frost') return !!spec.freeze;
+    if (id === 'shock') return !!(spec.para || spec.chainOnHit || spec.branchChain);
+    return false;
+  }
+
+  function effectList(ids, spec, tier) {
+    const pw = EFFECT_PW[tier] === undefined ? 0.6 : EFFECT_PW[tier];
+    const out = [];
+    for (let i = 0; i < ids.length; i++) {
+      if (specCovers(spec, ids[i])) continue;
+      out.push({ id: ids[i], pw: pw });
+    }
+    return out;
+  }
+
   function makeWeapon(cfg) {
     const F = global.FORMS[cfg.form];
     const ids = cfg.effectIds || (F.effect ? [F.effect] : []);
@@ -715,6 +752,7 @@
       tier: cfg.tier,
       index: cfg.index === undefined ? -1 : cfg.index,
       effectIds: ids,
+      effects: effectList(ids, cfg.spec, cfg.tier),
       maxLevel: global.TIER_RANGE[cfg.tier].max,
       icon: cfg.icon || (mainId ? Effects.icon(mainId) : F.icon),
       color: tint(rawColor, FUSED_TINT[tier] || 0),
@@ -768,6 +806,9 @@
   }
 
   Weapons.makeWeapon = makeWeapon;
+  Weapons.effectList = effectList;
+  Weapons.specCovers = specCovers;
+  Weapons.EFFECT_PW = EFFECT_PW;
 
   const B_DEFS = [
     { id: 'pierce',  name: '飞镖弹',   form: 'pierce',  icon: '◆', cd: 1.2, dps: 100, color: '#c8d2e8', brief: '高速穿透',

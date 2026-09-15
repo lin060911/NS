@@ -315,7 +315,10 @@
       }
       let h = '';
       for (const sv of list) {
-        h += '<div class="sv-item' + (pick ? ' pickable' : '') + '" data-id="' + sv.id + '">' +
+        const legacy = Saves.legacyReason(sv);
+        const useable = !legacy;
+        h += '<div class="sv-item' + (pick && useable ? ' pickable' : '') +
+          (legacy ? ' legacy' : '') + '" data-id="' + sv.id + '">' +
           '<div class="sv-head"><span class="sv-name">' + esc(sv.name) + '</span>' +
           '<span class="sv-lv">Lv' + sv.level + '</span></div>' +
           '<div class="sv-line">' + esc(Saves.weaponText(sv)) + '</div>' +
@@ -323,8 +326,11 @@
           '<div class="sv-line dim">' + esc(Saves.blessText(sv)) + '</div>' +
           '<div class="sv-line dim">存活 ' + Saves.timeText(sv) +
           ' · ' + Saves.powerText(sv) + '</div>' +
+          (legacy ? '<div class="sv-legacy">⚠ ' + esc(legacy) + '</div>' : '') +
           (pick
-            ? '<div class="sv-go">进 入 挑 战</div>'
+            ? (useable
+              ? '<div class="sv-go">进 入 挑 战</div>'
+              : '<div class="sv-go locked">不 可 使 用</div>')
             : '<div class="sv-act"><button data-act="rn">重命名</button>' +
               '<button data-act="rm" class="del">删除</button></div>') +
           '</div>';
@@ -335,7 +341,9 @@
       for (const it of items) {
         const id = it.getAttribute('data-id');
         if (pick) {
+          const legacy = Saves.legacyReason(Saves.get(id));
           it.onclick = () => {
+            if (legacy) { Sfx.play('ui'); this.toast('该 存 档 不 可 使 用'); return; }
             const rec = Saves.get(id);
             if (!rec) return;
             $('screenSaves').classList.add('hidden');
@@ -435,12 +443,22 @@
 
       html += '<div class="build-sec"><div class="build-h">被动</div>';
       let any = false;
+      const poolShown = Object.create(null);
       for (const id in p.passives) {
         const d = (Upgrades.passiveById && Upgrades.passiveById[id]) ||
           Upgrades.PASSIVES.find(x => x.id === id);
         if (!d) continue;
         any = true;
-        html += '<div class="build-row"><span style="color:' + d.color + '">' + d.icon + '</span>' +
+        const pool = Upgrades.poolOf ? Upgrades.poolOf(id) : null;
+        if (pool && !poolShown[pool.id]) {
+          poolShown[pool.id] = 1;
+          const used = Upgrades.poolUsed(p, pool);
+          html += '<div class="build-row pool"><span style="color:' + pool.color + '">' +
+            pool.icon + '</span><b>' + pool.name + '</b>' +
+            '<span class="bdim">共享 <b>' + used + ' / ' + pool.cap + '</b></span></div>';
+        }
+        html += '<div class="build-row' + (pool ? ' sub' : '') + '">' +
+          '<span style="color:' + d.color + '">' + d.icon + '</span>' +
           '<b>' + d.name + '</b><span class="bdim">Lv' + p.passives[id] + ' / ' + d.maxLevel + '</span></div>';
       }
       if (!any) html += '<div class="build-row bdim">暂无</div>';
@@ -1195,29 +1213,20 @@
       if (bb) {
         const show = !!opt.back;
         bb.classList.toggle('hidden', !show);
-        bb.onclick = show ? (() => this.backEventChoices()) : null;
+        bb.textContent = opt.backText || '← 返回事件选择';
+        bb.onclick = show ? (opt.backFn || (() => this.backEventChoices())) : null;
       }
     },
 
-    renderEvent(ev) {
+    renderCards(cards, opt) {
+      opt = opt || {};
       const box = $('cardBox');
       box.innerHTML = '';
+      this.setLevelHead(opt.title || '强 化', opt.sub || '');
 
-      const titles = {
-        'new': '获 取 弹 珠',
-        'up': '强 化 弹 珠',
-        'passive': '强 化 被 动'
-      };
-      const titlesub = {
-        'new': '三选一 · 获得一个 B 阶 弹珠',
-        'up': '三选一 · 一个弹珠等级 +1',
-        'passive': '三选一 · 一个被动等级 +1'
-      };
-      this.setLevelHead(titles[ev.kind] || '强 化', titlesub[ev.kind] || '');
-
-      for (const c of ev.cards) {
+      for (const c of cards) {
         const el = document.createElement('div');
-        el.className = 'card k-' + c.kind;
+        el.className = 'card k-' + (c.kind === 'pool' ? 'passive' : c.kind);
         const effLine = c.effect ? '<div class="c-eff">' + c.effect + '</div>' : '';
         const curRow = c.cur
           ? '<div class="c-row"><span class="ck">' + (c.curLabel || '现在') +
@@ -1235,9 +1244,53 @@
       }
 
       this.setLevelBtns({
-        back: true,
+        back: !!opt.back,
+        backFn: opt.back,
+        backText: opt.backText,
+        reroll: !!opt.reroll
+      });
+    },
+
+    renderEvent(ev) {
+      const titles = {
+        'new': '获 取 弹 珠',
+        'up': '强 化 弹 珠',
+        'passive': '强 化 被 动'
+      };
+      const titlesub = {
+        'new': '三选一 · 获得一个 B 阶 弹珠',
+        'up': '三选一 · 一个弹珠等级 +1',
+        'passive': '三选一 · 一个被动等级 +1'
+      };
+      this.renderCards(ev.cards, {
+        title: titles[ev.kind] || '强 化',
+        sub: titlesub[ev.kind] || '',
+        back: () => this.backEventChoices(),
         reroll: !!ev.canReroll && !this._rerollUsed
       });
+    },
+
+    /* 池条目：进入下一层，把池成员展开成二选一 */
+    openPoolPick(card) {
+      const pool = Upgrades.poolById(card.poolId);
+      if (!pool) return;
+      const cards = Upgrades.poolCards(card.poolId, this.player);
+      if (!cards.length) return;
+      this._poolParent = this.levelEvent;
+      Sfx.play('ui');
+      this.renderCards(cards, {
+        title: pool.name.split('').join(' '),
+        sub: '二选一 · 把 1 次分配给其中一项（共享 ' + pool.cap + ' 级）',
+        back: () => this.backFromPool(),
+        backText: '← 返回被动选择'
+      });
+    },
+
+    backFromPool() {
+      this._poolParent = null;
+      Sfx.play('ui');
+      if (this.levelEvent) this.renderEvent(this.levelEvent);
+      else this.backEventChoices();
     },
 
     rerollEvent() {
@@ -1254,6 +1307,7 @@
 
     chooseCard(card) {
       if (this.state !== 'levelup') return;
+      if (card.kind === 'pool') { this.openPoolPick(card); return; }
       Upgrades.apply(this, card);
       this.pendingLevelUps--;
       $('screenLevel').classList.add('hidden');
@@ -2005,8 +2059,10 @@
         const def = (Upgrades.passiveById && Upgrades.passiveById[id]) ||
           Upgrades.PASSIVES.find(x => x.id === id);
         if (!def) continue;
+        const pool = Upgrades.poolOf ? Upgrades.poolOf(id) : null;
+        const lvTxt = p.passives[id] + (pool ? ' ' + pool.icon + Upgrades.poolUsed(p, pool) : '');
         ps.innerHTML += '<div class="chip pas"><span class="ic" style="color:' + def.color + '">' + def.icon +
-          '</span>' + def.name + '<span class="lv">' + p.passives[id] + '</span></div>';
+          '</span>' + def.name + '<span class="lv">' + lvTxt + '</span></div>';
       }
     },
 

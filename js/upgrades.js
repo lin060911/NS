@@ -25,6 +25,50 @@
     return tbl[clampLv(lv, tbl.length - 1)];
   }
 
+  /* ── 被动「池」────────────────────────────────────────────
+     旧版超频核心与弹道散射是两个独立被动，都能点满，导致弹量相乘
+     （5 弹道 × 2.5 射速 = ×12.5），弹幕糊屏、性能爆炸。
+     池化后两者共享一个 5 级池，总投入恒定。 */
+  const POOLS = {
+    freq: {
+      id: 'freq',
+      name: '火控协议',
+      icon: '⊕',
+      color: '#ff4538',
+      cap: 5,
+      members: ['overclock', 'split'],
+      kind: 'pool',
+      maxLevel: 5,
+      brief: '超频＆散射共享等级上限<br> 5 次加点可自由分配',
+      desc: function (used) {
+        const left = this.cap - (used || 0);
+        return '共享等级 <b>' + (used || 0) + ' / ' + this.cap + '</b><br>' +
+          '<span class="dim">还可分配 ' + Math.max(0, left) + ' 次</span>';
+      }
+    }
+  };
+
+  const POOL_OF = Object.create(null);
+  for (const k in POOLS) {
+    for (let i = 0; i < POOLS[k].members.length; i++) POOL_OF[POOLS[k].members[i]] = POOLS[k];
+  }
+
+  function poolOf(id) { return POOL_OF[id] || null; }
+
+  function poolUsed(P, pool) {
+    let n = 0;
+    for (let i = 0; i < pool.members.length; i++) n += (P.passives[pool.members[i]] || 0);
+    return n;
+  }
+
+  /* 池成员状态：每个成员独占一行（⧗ 超频协议 Lv2 ⏎ ⋔ 散射协议 Lv1） */
+  function memberLines(P, pool) {
+    return pool.members.map((id) => {
+      const m = byId[id];
+      return (m ? m.icon + ' ' + m.name : id) + ' <b>Lv' + (P.passives[id] || 0) + '</b>';
+    }).join('<br>');
+  }
+
   const PASSIVES = [
     {
       id: 'power', name: '力量增幅', icon: '✦', color: '#824dff', maxLevel: 5,
@@ -37,8 +81,8 @@
       }
     },
     {
-      id: 'overclock', name: '超频核心', icon: '⧗', color: '#38f0ff', maxLevel: 5,
-      brief: '每级提升 30% 攻速，满级 +150%',
+      id: 'overclock', name: '超频协议', icon: '⧗', color: '#38f0ff', maxLevel: 5,
+      brief: '每级提升 30% 攻速',
       desc: function (lv) {
         const f = (k) => '攻击间隔 <b>×' + (1 / ocRate(k)).toFixed(2) + '</b><br>' +
           '<span class="dim">攻速 +' + rnd(OC_STEP * k * 100) + '%　每级 +' +
@@ -47,7 +91,7 @@
       }
     },
     {
-      id: 'split', name: '弹道散射', icon: '⋔', color: '#ffc93c', maxLevel: 5,
+      id: 'split', name: '散射协议', icon: '⋔', color: '#ffc93c', maxLevel: 5,
       brief: '增加弹道数量：两侧弹体更小、伤害更低',
       desc: function (lv) {
         const f = (k) => {
@@ -80,7 +124,7 @@
       }
     },
     {
-      id: 'plating', name: '装甲插板', icon: '▣', color: '#ff7a3d', maxLevel: 5,
+      id: 'plating', name: '装甲插板', icon: '▣', color: '#ffd23d', maxLevel: 5,
       brief: '提高生命上限，并立即回复 12 点生命',
       desc: function (lv) {
         const f = (k) => '生命上限 <b>+' + k * 12 + '</b><br>' +
@@ -89,7 +133,7 @@
       }
     },
     {
-      id: 'nano', name: '纳米修复', icon: '✚', color: '#9dff3c', maxLevel: 5,
+      id: 'nano', name: '纳米修复', icon: '✚', color: '#3cff3c', maxLevel: 5,
       brief: '按最大生命的百分比持续回复生命',
       desc: function (lv) {
         const f = (k) => '每秒回复 <b>' + (k * 0.2).toFixed(2) + '%</b> 最大生命<br>' +
@@ -98,7 +142,7 @@
       }
     },
     {
-      id: 'thruster', name: '马赫推进', icon: '⋙', color: '#7af0ff', maxLevel: 5,
+      id: 'thruster', name: '马赫推进', icon: '⋙', color: '#7a99ff', maxLevel: 5,
       brief: '提高移动速度',
       desc: function (lv) {
         const f = (k) => '移速 <b>×' + Math.pow(1.10, k).toFixed(2) + '</b><br>' +
@@ -125,7 +169,12 @@
   const Upgrades = {
     PASSIVES: PASSIVES,
     passiveById: byId,
+    POOLS: POOLS,
     MAX_WEAPONS: MAX_WEAPONS,
+
+    poolById: function (id) { return POOLS[id] || null; },
+    poolOf: poolOf,
+    poolUsed: poolUsed,
 
     /* 数值表：player / weapons 等模块统一从这里取，避免多处硬编码 */
     POWER_STEP: POWER_STEP,
@@ -137,6 +186,13 @@
     critChanceAt: critChanceAt,
     critMulAt: critMulAt,
     splitPattern: splitPattern,
+
+    /* 可选被动总数：池内 n 个成员合并成 1 个池条目 */
+    passiveTotal() {
+      let n = PASSIVES.length;
+      for (const k in POOLS) n -= (POOLS[k].members.length - 1);
+      return n;
+    },
 
     KIND_META: {
       new: {
@@ -156,7 +212,8 @@
         kind: 'passive', icon: '✦', color: '#df7563', cls: 't-up',
         title: '强化被动',
         sub: '三选一 · 提升 1 级',
-        desc: '强化角色本身：伤害、冷却、移速、生命、减伤，全场弹珠通用'
+        desc: '强化角色本身：伤害、冷却、移速、生命、减伤，全场弹珠通用。' +
+              '<b>火控协议</b>为共享池，选中后再决定投给哪一项'
       }
     },
 
@@ -179,7 +236,7 @@
           if (!pool.length) reason = P.weapons.length ? '所有弹珠均已满级' : '还没有可强化的弹珠';
         } else {
           pool = this.passiveable(G);
-          badge = '可选 ' + pool.length + ' / ' + PASSIVES.length;
+          badge = '可选 ' + pool.length + ' / ' + this.passiveTotal();
           if (!pool.length) reason = '所有被动均已满级';
         }
         out.push({
@@ -208,9 +265,37 @@
       });
     },
 
+    /* 可选被动：池成员不单独出现，由池条目代表；
+       池内已投点数 ≥ cap 时整池不再出现。 */
     passiveable(G) {
       const P = G.player;
-      return PASSIVES.filter(p => (P.passives[p.id] || 0) < p.maxLevel);
+      const out = [];
+      for (const p of PASSIVES) {
+        const pool = poolOf(p.id);
+        if (pool) {
+          if (pool.members[0] !== p.id) continue;
+          if (poolUsed(P, pool) >= pool.cap) continue;
+          out.push(pool);
+          continue;
+        }
+        if ((P.passives[p.id] || 0) < p.maxLevel) out.push(p);
+      }
+      return out;
+    },
+
+    /* 池条目的下一层：把池成员展开成卡片（样式与普通被动一致） */
+    poolCards(poolId, P) {
+      const pool = POOLS[poolId];
+      if (!pool || !P) return [];
+      const out = [];
+      for (const id of pool.members) {
+        const p = byId[id];
+        if (!p) continue;
+        const lv = P.passives[id] || 0;
+        if (lv >= p.maxLevel) continue;
+        out.push(makePassiveCard(p, lv, P));
+      }
+      return out;
     },
 
     pickN(arr, n) {
@@ -243,8 +328,11 @@
         return { kind: 'up', cards: cards, canReroll: false };
       }
 
+      const P = G.player;
       const cards = this.pickN(this.passiveable(G), 3)
-        .map(p => makePassiveCard(p, P0(G)[p.id] || 0));
+        .map((ent) => ent.kind === 'pool'
+          ? makePoolCard(ent, P)
+          : makePassiveCard(ent, P.passives[ent.id] || 0, P));
       return { kind: 'passive', cards: cards, canReroll: false };
     },
 
@@ -272,11 +360,9 @@
     }
   };
 
-  function P0(G) { return G.player.passives; }
-
   function effectLine(def) {
     const ids = def.effectIds || [];
-    if (!ids.length) return '<span class="dim">纯弹道形态 · 无附加特效</span>';
+    if (!ids.length) return '<span class="dim">伤害型|无附加效果</span>';
     return ids.map((id) =>
       Effects.icon(id) + ' <b>' + Effects.name(id) + '</b>　' + Effects.brief(id)
     ).join('<br>');
@@ -318,18 +404,53 @@
     };
   }
 
-  function makePassiveCard(p, lv) {
+  function makePassiveCard(p, lv, P) {
     const d = p.desc(lv);
+    const pool = P ? poolOf(p.id) : null;
+    let tag = '被 动 · Lv' + lv + ' → Lv' + (lv + 1);
+    let cur = lv > 0 ? 'Lv' + lv + '　' + d.cur : '尚未持有';
+    let next = 'Lv' + (lv + 1) + '　' + d.next;
+
+    if (pool && P) {
+      const used = poolUsed(P, pool);
+      /* 池成员：把共享进度摆到最显眼的位置 */
+      tag = pool.icon + ' ' + pool.name + ' <b>' + used + ' / ' + pool.cap + '</b>' +
+        '　·　' + p.name + ' Lv' + lv + ' → Lv' + (lv + 1);
+      cur = memberLines(P, pool) + '<br>' +
+        (lv > 0 ? 'Lv' + lv + '　' + d.cur : '尚未持有');
+      next = 'Lv' + (lv + 1) + '　' + d.next +
+        '<br><span class="dim">火控协议等级 ' + (used + 1) + ' / ' + pool.cap + '</span>';
+    }
+
     return {
       kind: 'passive', id: p.id, name: p.name, icon: p.icon, color: p.color,
       level: lv + 1,
-      tag: '被 动 · Lv' + lv + ' → Lv' + (lv + 1), tagCls: 't-up',
+      tag: tag, tagCls: 't-up',
       brief: p.brief,
       effect: '',
-      cur: lv > 0 ? 'Lv' + lv + '　' + d.cur : '尚未持有',
-      next: 'Lv' + (lv + 1) + '　' + d.next,
+      cur: cur,
+      next: next,
       curLabel: '现在',
       nextLabel: '升级后'
+    };
+  }
+
+  function makePoolCard(pool, P) {
+    const used = poolUsed(P, pool);
+    const left = Math.max(0, pool.cap - used);
+    return {
+      kind: 'pool', id: 'pool:' + pool.id, poolId: pool.id,
+      name: pool.name, icon: pool.icon, color: pool.color,
+      level: used + 1,
+      tag: '协议 · 共享 <b>' + used + ' / ' + pool.cap + '</b> 级',
+      tagCls: 't-up',
+      brief: pool.brief,
+      effect: '<span class="dim">选中决定把 1 级分配给一项</span>',
+      cur: memberLines(P, pool),
+      next: '还可投入 <b>' + left + '</b> 级<br>' +
+        '<span class="dim">两项协议共享同一池<br>总分配次数不超过 ' + pool.cap + ' 次</span>',
+      curLabel: '已投入',
+      nextLabel: '可分配'
     };
   }
 
