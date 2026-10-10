@@ -5,6 +5,9 @@
   const fx = () => global.FX;
   const E = () => global.Enemies;
 
+  /* 毒层每层每秒造成的伤害 = 施加武器的每秒伤害 × VENOM_K */
+  const VENOM_K = 0.0625;
+
   const DEFS = {
 
     frost: {
@@ -29,10 +32,20 @@
     venom: {
       id: 'venom', name: '剧毒', icon: '☣', color: '#9dff3c',
       brief: '叠加毒层，每层降低目标全抗性',
-      onHit(G, e, pw) {
+      onHit(G, e, pw, dmg, dps) {
         const cap = Math.round(4 + pw * 4);
         e.venomStack = Math.min(cap, (e.venomStack || 0) + 1);
         e.venomT = 3 + pw * 2;
+        /* 毒层持续伤害：按施加武器的「每秒伤害」折算（VENOM_K × 每秒伤害/层）。
+           旧版是 目标maxHp × 0.0025 × 层数 —— 收益只取决于目标血量、与武器强度和
+           CD 全无关系，首领身上实测比面板高 10~38 倍，且同一把标尺量不了它。
+           满层收益：B 阶 6 层 ≈ +38%、A 阶 7 层 ≈ +44%、S 阶 8 层 ≈ +50% 每秒伤害。 */
+        const base = (dps === undefined ? dmg : dps) * VENOM_K;
+        if (base > (e.venomDps || 0)) {
+          e.venomDps = base;
+          const W = global.Weapons;
+          if (W && W._src) { e.venomSrc = W._src; e.venomSrcDps = W._src._crowdDps || dps || dmg; }
+        }
       },
       stateMul(e) { return 1 + (e.venomStack || 0) * 0.05; }
     },
@@ -61,6 +74,9 @@
   };
 
   const Effects = {
+    /* 毒层换算系数（技能等外部调用点需要它来写入 e.venomDps） */
+    VENOM_K: VENOM_K,
+
     name(id) { return DEFS[id] ? DEFS[id].name : ''; },
     color(id) { return DEFS[id] ? DEFS[id].color : '#ffffff'; },
     icon(id) { return DEFS[id] ? DEFS[id].icon : '·'; },
@@ -71,25 +87,36 @@
       return U.clamp((lv - 1) / (maxLv - 1), 0, 1);
     },
 
-    onHit(G, e, list, dmg) {
+    onHit(G, e, list, dmg, dps) {
       if (!e || e.dead || !list || !list.length) return;
       for (let i = 0; i < list.length; i++) {
         const d = DEFS[list[i].id];
-        if (d && d.onHit) d.onHit(G, e, list[i].pw || 0.5, dmg);
+        if (d && d.onHit) d.onHit(G, e, list[i].pw || 0.5, dmg, dps);
       }
     },
 
     stateMul(e) {
       if (!e) return 1;
+      /* 缓存：只有「冻结」与「毒层」会影响这个系数，用签名比对代替每帧多次函数调用。
+         后期 200+ 敌人时 Enemies.damage 每帧会被调用数百次，这里是纯开销。 */
+      const sig = (e.frozen > 0 ? 1 : 0) | ((e.venomStack || 0) << 1);
+      if (e._smSig === sig) return e._sm;
       let m = 1;
       for (const id in DEFS) {
         const d = DEFS[id];
         if (d && d.stateMul) m *= d.stateMul(e);
       }
+      e._smSig = sig; e._sm = m;
       return m;
     },
 
     tick(G, e, dt) {
+      /* 快速路径：身上没有任何生效状态时直接返回。
+         这是 Enemies.update 里每只敌人每帧都要走的一次判断，最省的一层。 */
+      if (!(e.frozen > 0 || e.paralyze > 0 || e.slowT > 0 || e.vulnT > 0 || e.dotT > 0 ||
+            (e.burn && e.burn.t > 0) || e.venomStack > 0 || e.armorBreakT > 0 || e.frostStack > 0)) {
+        return false;
+      }
       let stop = false;
 
       if (e.isBoss) { e.frozen = 0; e.paralyze = 0; }
@@ -114,9 +141,14 @@
         e.vulnT -= dt;
         if (e.vulnT <= 0) { e.vuln = 0; e.vulnT = 0; }
       }
-      if (e.dot && e.dotT > 0) {
+      /* 持续伤害合并结算：原先 dot / burn / 毒层 各自调一次 Enemies.damage，
+         每次都要走 stateMul → 易伤 → 护甲 → 命中特效判定 → 音效。
+         三者都是乘算修正，先求和再结算与逐次结算完全等价，
+         但后期每帧数百次调用会省下可观开销。 */
+      let tick = 0;
+      if (e.dotT > 0) {
         e.dotT -= dt;
-        E().damage(G, e, e.dot * dt, { silent: true });
+        tick += e.dot * dt;
         if (!fx().lean && Math.random() < dt * 6) {
           fx().burst(e.x, e.y, '#9dff3c', 1, { speed: 20, life: 0.4, size: 2 });
         }
@@ -125,7 +157,7 @@
 
       if (e.burn && e.burn.t > 0) {
         e.burn.t -= dt;
-        E().damage(G, e, e.burn.dps * dt, { silent: true });
+        tick += e.burn.dps * dt;
         if (!fx().lean && Math.random() < dt * 7) {
           fx().burst(e.x, e.y, '#ff5a2d', 1, { speed: 34, life: 0.36, size: 2.2 });
         }
@@ -134,11 +166,20 @@
 
       if (e.venomStack > 0) {
         e.venomT -= dt;
-        E().damage(G, e, e.maxHp * 0.0025 * e.venomStack * dt, { silent: true });
+        if (e.venomDps > 0) tick += e.venomDps * e.venomStack * dt;
         if (!fx().lean && Math.random() < dt * 3) {
           fx().burst(e.x, e.y, '#9dff3c', 1, { speed: 18, life: 0.45, size: 2 });
         }
-        if (e.venomT <= 0) { e.venomStack = 0; e.venomT = 0; }
+        if (e.venomT <= 0) { e.venomStack = 0; e.venomT = 0; e.venomDps = 0; }
+      }
+      if (tick > 0) {
+        /* 持续伤害也可能是「群体伤害」（36 个敌人同时中毒），同样受来源武器的
+           群体预算约束；来源为空（技能施加的毒）时不限制 */
+        const W = global.Weapons;
+        const src = e.dotSrc || e.venomSrc || null;
+        if (W && src) W.beginSrc(src, (e.dotSrc ? e.dotSrcDps : e.venomSrcDps) || 0, dt, G);
+        E().damage(G, e, tick, { silent: true });
+        if (W && src) W.endSrc();
       }
 
       if (e.armorBreakT > 0) {
@@ -161,7 +202,12 @@
 
     dot(e, dps, dur) {
       if (!e || e.dead) return;
-      if (dps > (e.dot || 0)) e.dot = dps;
+      if (dps > (e.dot || 0)) {
+        e.dot = dps;
+        /* 记下来源武器：DOT 在后续帧结算，群体预算要按施加者扣额度 */
+        const W = global.Weapons;
+        if (W && W._src) { e.dotSrc = W._src; e.dotSrcDps = W._src._crowdDps || dps; }
+      }
       e.dotT = Math.max(e.dotT || 0, dur);
     },
 

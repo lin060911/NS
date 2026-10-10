@@ -3,6 +3,14 @@
 
   const TAU = Math.PI * 2;
 
+  function hexRgb(hex) {
+    const h = String(hex || '').replace('#', '');
+    const s = h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h.slice(0, 6);
+    const n = parseInt(s, 16);
+    if (isNaN(n) || s.length < 6) return '157,255,60';
+    return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+  }
+
   const FX = {
     particles: [],
     texts: [],
@@ -17,11 +25,17 @@
     MAX_FULL: { particles: 340, texts: 32, rings: 64, bolts: 44 },
     quality: 1,
     _avgMs: 16,
-    /* 掉帧档位：lean = 削减装饰性特效；minimal = 只保留必要反馈 */
+    /* 掉帧档位：lean = 削减装饰性特效；minimal = 只保留必要反馈；
+       extreme = 极端情况（后期密集弹幕 + 大面积领域）再砍一层：
+                 去掉大面积光晕填充 / 敌人血条 / 伤害数字 / 星空装饰。
+       三档都只由帧时间驱动，恢复正常帧率会自动退回。 */
     lean: false,
     minimal: false,
+    extreme: false,
     LEAN_AT: 0.5,
     MIN_AT: 0.34,
+    EXTREME_AT: 0.22,
+    QUALITY_MIN: 0.10,
 
     /* 按画质随机取整缩放数量（避免"至少 1 个"导致削减失效） */
     scale(n) {
@@ -55,8 +69,49 @@
       if (this.texts.length > this.MAX.texts) this.texts.length = this.MAX.texts;
     },
 
+    /* ── 径向光晕贴图缓存 ────────────────────────────────────────
+       领域/毒云/黑洞都是「径向渐变填充」，而 createRadialGradient + 两次
+       addColorStop 是 Canvas 里偏贵的调用，原来每帧每朵云都要重建一次。
+       同 (颜色, 半径) 的径向渐变就是同一张图，预渲染成离屏 canvas 后
+       drawImage 即可 —— 正常画质下像素结果一致（半径按 4px 分桶；
+       渐变中心烘成 alpha=1，实际强度由 globalAlpha 控制，与原来等价）。 */
+    _glowCache: Object.create(null),
+    _glowN: 0,
+    glowSprite(color, r, inner) {
+      const inn = inner === undefined ? 0.15 : inner;
+      const bucket = Math.max(4, Math.round(r / 4) * 4);
+      const key = color + '|' + bucket + '|' + inn;
+      let cv = this._glowCache[key];
+      if (cv) return cv;
+      /* 贴图分辨率封顶：径向渐变放大后依然是同一条平滑的 alpha 斜坡，
+         192px 贴图放到 600px 领域上看不出差别，但内存从 ~5.7MB/张 降到 ~0.6MB/张。
+         缓存数量也封顶，避免颜色/半径组合无限增长。 */
+      const pr = Math.min(bucket, 192);
+      if (this._glowN > 48) { this._glowCache = Object.create(null); this._glowN = 0; }
+      const size = pr * 2;
+      cv = document.createElement('canvas');
+      cv.width = size; cv.height = size;
+      const c = cv.getContext('2d');
+      const g = c.createRadialGradient(pr, pr, pr * inn, pr, pr, pr);
+      const rgb = hexRgb(color);
+      g.addColorStop(0, 'rgba(' + rgb + ',1)');
+      g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(pr, pr, pr, 0, TAU); c.fill();
+      this._glowCache[key] = cv;
+      this._glowN++;
+      return cv;
+    },
+
     addShake(v) { this.shake = Math.min(26, this.shake + v); },
     addFlash(v) { this.flash = Math.min(1, this.flash + v); },
+
+    /* swap-remove：反向遍历时把尾元素换到 i 再 pop（粒子/光环掉得比子弹还频繁） */
+    removeAt(list, i) {
+      const last = list.length - 1;
+      list[i] = list[last];
+      list.pop();
+    },
 
     burst(x, y, color, count, opts) {
       opts = opts || {};
@@ -130,19 +185,23 @@
          掉得比回升快得多（掉帧要立刻见效，回升则慢慢试探）。 */
       const ms = Math.max(1, Math.min(60, (dt || 0.016) * 1000));
       this._avgMs += (ms - this._avgMs) * 0.08;
-      if (this._avgMs > 30) this.quality = Math.max(0.22, this.quality - dt * 1.8);
-      else if (this._avgMs > 24) this.quality = Math.max(0.22, this.quality - dt * 0.9);
+      /* 掉帧反应更快：严重掉帧立刻砍一档，避免「已经卡了两秒才开始降特效」 */
+      const qm = this.QUALITY_MIN;
+      if (this._avgMs > 45) this.quality = Math.max(qm, this.quality - dt * 3.6);
+      else if (this._avgMs > 30) this.quality = Math.max(qm, this.quality - dt * 2.4);
+      else if (this._avgMs > 24) this.quality = Math.max(qm, this.quality - dt * 1.2);
       else if (this._avgMs < 19) this.quality = Math.min(1, this.quality + dt * 0.30);
 
       this.lean = this.quality < this.LEAN_AT;
       this.minimal = this.quality < this.MIN_AT;
+      this.extreme = this.quality < this.EXTREME_AT;
       this.syncBudget();
 
       const P = this.particles;
       for (let i = P.length - 1; i >= 0; i--) {
         const p = P[i];
         p.life -= dt;
-        if (p.life <= 0) { P.splice(i, 1); continue; }
+        if (p.life <= 0) { FX.removeAt(P, i); continue; }
         const d = Math.exp(-p.drag * dt);
         p.vx *= d; p.vy *= d;
         p.x += p.vx * dt; p.y += p.vy * dt;
@@ -151,7 +210,7 @@
       for (let i = T.length - 1; i >= 0; i--) {
         const t = T[i];
         t.life -= dt;
-        if (t.life <= 0) { T.splice(i, 1); continue; }
+        if (t.life <= 0) { FX.removeAt(T, i); continue; }
         t.y += t.vy * dt;
         t.x += t.vx * dt;
         t.vy *= Math.exp(-1.6 * dt);
@@ -159,12 +218,12 @@
       const R = this.rings;
       for (let i = R.length - 1; i >= 0; i--) {
         R[i].life -= dt;
-        if (R[i].life <= 0) R.splice(i, 1);
+        if (R[i].life <= 0) FX.removeAt(R, i);
       }
       const B = this.bolts;
       for (let i = B.length - 1; i >= 0; i--) {
         B[i].life -= dt;
-        if (B[i].life <= 0) B.splice(i, 1);
+        if (B[i].life <= 0) FX.removeAt(B, i);
       }
 
       this.shake *= Math.exp(-9 * dt);

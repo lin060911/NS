@@ -539,10 +539,11 @@
       const rows = [];
       rows.push(['品阶', d.tierName + ' 阶 · 满级 Lv' + d.maxLevel]);
       const ml = d.maxLevel;
-      const dpsMax = Math.round(d.baseDps * ml);
-      const perHit = Math.round(d.baseDps * ml * d.baseCd / (d.baseCount || 1));
-      rows.push(['满级输出', '<b>' + dpsMax + '</b> DPS · 单发 <b>' + perHit +
-        '</b> · 间隔 ' + d.baseCd.toFixed(2) + ' 秒']);
+      /* 面板口径：满级「每秒伤害」= 单发 DMG × 满级 ÷ 间隔（DMG/CD 模型） */
+      const dpsMax = Math.round(d.baseDmg * ml / d.baseCd);
+      rows.push(['满级每秒伤害', '<b>' + dpsMax + '</b>　·　攻速 <b>' +
+        (1 / d.baseCd).toFixed(2) + '</b> 次/秒' +
+        (d.panelNote ? '<br><span class="dim">' + d.panelNote + '</span>' : '')]);
       const eff = d.effectIds.map((x) => Effects.name(x)).filter(Boolean);
       rows.push(['属性', eff.length ? eff.join(' ＋ ') : '无属性']);
       const spec = this.specLines(d.spec);
@@ -780,14 +781,22 @@
 
       for (const w of p.weapons) {
         const wd = Weapons.defs[w.id];
+        /* 群体预算：施放瞬间（射线/领域直伤）的伤害也归到这把武器头上 */
+        Weapons.beginSrc(w, wd ? wd.stats(w.level, p).dps : 0, dt, this);
+        Weapons.beginVolley();     // 同一次攻击的弹幕共享 volley（多子弹递减用）
         if (wd && wd.update) wd.update(this, w, dt);
         else Weapons.fire(this, w, dt);
+        Weapons.endSrc();
+        Weapons.endVolley();
       }
       Weapons.update(this, dt);
 
+      /* 先跑技能计时器（storm 的 end() 需要看到本帧还活着的技能实体），
+         再更新技能层（召唤物/飞剑/苹果）—— 顺序反了会让「飞出/汇合」这类
+         收尾阶段变成死代码 */
+      this.updateSkillStorms(dt);
       Abilities.update(this, dt);
       if (this.mode === 'bossRush') this.rushTune(dt);
-      this.updateSkillStorms(dt);
       Telegraph.update(this, dt);
 
       if (this.roarCd > 0) this.roarCd = Math.max(0, this.roarCd - dt);
@@ -865,7 +874,7 @@
         }
         if (s.t <= 0) {
           if (s.end && !s.done) { s.done = true; s.end(this, s); }
-          L.splice(i, 1);
+          this.removeAt(L, i);
         }
       }
     },
@@ -972,7 +981,7 @@
 
         if (d2 < (p.r + 12) * (p.r + 12)) {
           const ups = p.gainXp(g.val);
-          G.splice(i, 1);
+          this.removeAt(G, i);
           if (ups > 0) {
             this.pendingLevelUps += ups;
             this.checkFusionUnlock();
@@ -1018,7 +1027,7 @@
         h.y += h.vy * dt;
 
         if (d2 < (p.r + 14) * (p.r + 14)) {
-          H.splice(i, 1);
+          this.removeAt(H, i);
           const before = p.hp;
           p.hp = Math.min(p.maxHp, p.hp + h.val);
           const gain = p.hp - before;
@@ -1082,7 +1091,7 @@
         const c = this.chests[i];
         const d = U.dist(c.x, c.y, p.x, p.y);
         if (d < 46) {
-          this.chests.splice(i, 1);
+          this.removeAt(this.chests, i);
           FX.ring(c.x, c.y, '#ffd23c', 10, 140, 0.6, 5);
           FX.burst(c.x, c.y, '#ffd23c', 34, { speed: 260, life: 0.8, size: 3 });
           FX.addShake(6);
@@ -1677,8 +1686,24 @@
     hurtPlayer(dmg, src, lethal) {
       const p = this.player;
       if (p.invuln > 0 || this.state !== 'playing') return;
+
+      /* 冰晶防线（绝对零度）：50 点护盾池优先吸收，吸完/超时才消失 */
+      let incoming = dmg;
+      if (p.iceShield > 0) {
+        const use = Math.min(p.iceShield, incoming);
+        p.iceShield -= use;
+        incoming -= use;
+        FX.ring(p.x, p.y, '#7ad7ff', 10, 62, 0.22, 3);
+        FX.text(p.x, p.y - 30, '-' + Math.round(use), '#7ad7ff', { size: 13, life: 0.5 });
+        if (p.iceShield <= 0) {
+          p.iceShield = 0; p.iceShieldT = 0;
+          FX.burst(p.x, p.y, '#7ad7ff', 20, { speed: 190, life: 0.6, size: 2.6 });
+        }
+      }
+      if (incoming <= 0) { p.hurtFlash = 0.12; return; }
+
       Sfx.play('hurt');
-      const real = Math.max(1, dmg * (1 - p.armor / (p.armor + 20)));
+      const real = Math.max(1, incoming * (1 - p.armor / (p.armor + 20)));
 
       if (!lethal && p.blessing && p.blessing.undying && p.hp - real <= 0) {
         p.blessing.undying = false;
@@ -1830,7 +1855,14 @@
       if (!e) return;
       if (e._hudSlot) { e._hudSlot = null; }
       const i = this.bosses.indexOf(e);
-      if (i >= 0) this.bosses.splice(i, 1);
+      if (i >= 0) this.removeAt(this.bosses, i);
+    },
+
+    /* swap-remove：反向遍历删除时不搬移数组（宝石/回血/宝箱/技能风暴都用它） */
+    removeAt(list, i) {
+      const last = list.length - 1;
+      list[i] = list[last];
+      list.pop();
     },
 
     updateBossHud() {
@@ -2129,6 +2161,7 @@
       Enemies.draw(ctx);
       this.drawChests(ctx);
 
+      Abilities.draw(ctx, this);        // 技能实体层：飞剑 / 轰炸机 / 射线 / 冰晶墙 / 蛊惑精英
       Weapons.draw(ctx, this);
       FX.draw(ctx);
 
@@ -2137,6 +2170,7 @@
       if (this.player && this.state !== 'menu') {
         this.player.draw(ctx, this);
       }
+      Abilities.drawTop(ctx, this);     // 顶层：万有引力化身苹果（盖在主角/首领之上）
 
       FX.drawTexts(ctx);
 
@@ -2236,6 +2270,8 @@
     },
 
     drawStars(ctx) {
+      /* 极限降特效档：连背景星点也省掉（纯装饰，压帧率时最先让位） */
+      if (FX.extreme) return;
       const step = 150;
       const ox = -this.cam.x * 0.3, oy = -this.cam.y * 0.3;
       let x0 = ox % step; if (x0 > 0) x0 -= step;

@@ -79,6 +79,9 @@
     this.map = new Map();
   }
   Grid.prototype.key = function (cx, cy) { return cx * 73856093 ^ cy * 19349663; };
+  /* 实测：复用格子数组（逐格 Map.get + length=0 + used 记账）反而比
+     Map.clear() + 重新分配更慢，所以这里保持 Map.clear()；只额外记录敌人所在格子，
+     供分离检测直接走 3×3 邻格。 */
   Grid.prototype.clear = function () { this.map.clear(); };
   Grid.prototype.insert = function (e) {
     const c = this.cell;
@@ -86,6 +89,7 @@
     const k = this.key(cx, cy);
     let arr = this.map.get(k);
     if (!arr) { arr = []; this.map.set(k, arr); }
+    e._cx = cx; e._cy = cy;
     arr.push(e);
   };
   Grid.prototype.query = function (x, y, r, out) {
@@ -433,7 +437,7 @@
         skillCd: U.rand(3.5, 6),
         casting: false,
         burn: null, frozen: 0, frostStack: 0,
-        venomStack: 0, venomT: 0,
+        venomStack: 0, venomT: 0, venomDps: 0,
         paralyze: 0, armorBreak: 0, armorBreakT: 0,
         phase2: false, dmgTaken: 0,
         vuln: 0, vulnT: 0, dot: null, dotT: 0
@@ -563,6 +567,23 @@
       return this.grid.query(x, y, r, this._nearBuf);
     },
 
+    /* swap-remove：与 Weapons.removeAt 同款（敌弹/敌人密集删除时避免 O(n²) 搬移） */
+    removeAt(list, i) {
+      const last = list.length - 1;
+      list[i] = list[last];
+      list.pop();
+    },
+
+    /* 按调用点分桶的查询缓冲：同一个缓冲被嵌套调用（例如「子弹命中 → 爆炸 → 再查询」）
+       会互相覆盖，导致外层循环遍历到被换掉的数组。
+       每个逻辑调用点用各自的 key，就能同时避免这种串扰与每次分配数组的开销。 */
+    _bufs: Object.create(null),
+    nearIn(key, x, y, r) {
+      let b = this._bufs[key];
+      if (!b) b = this._bufs[key] = [];
+      return this.grid.query(x, y, r, b);
+    },
+
     nearest(x, y, maxR, exclude) {
       const cand = this.grid.query(x, y, maxR, this._q);
       let best = null, bd = maxR * maxR;
@@ -580,6 +601,9 @@
       const p = G.player;
       const L = this.list;
       const sep = 0.55;
+      /* 友方召唤物会吸引仇恨（无敌坦克）：这一帧有召唤物时才取函数引用 */
+      const A = global.Abilities;
+      const tauntFn = (A && A.minions && A.minions.length) ? A.taunt : null;
 
       for (let i = L.length - 1; i >= 0; i--) {
         const e = L[i];
@@ -600,8 +624,18 @@
         const kd = Math.exp(-9 * dt);
         e.kx *= kd; e.ky *= kd;
 
-        const dx = p.x - e.x, dy = p.y - e.y;
-        const dist = Math.hypot(dx, dy) || 1;
+        /* distP = 到玩家的距离（接触伤害 / 离屏判定用它）；
+           dist  = 到当前追击目标的距离（可能被召唤物吸引过去） */
+        const dxp = p.x - e.x, dyp = p.y - e.y;
+        const distP = Math.sqrt(dxp * dxp + dyp * dyp) || 1;
+        let dx = dxp, dy = dyp, dist = distP;
+        if (tauntFn) {
+          const m = tauntFn(e);
+          if (m) {
+            dx = m.x - e.x; dy = m.y - e.y;
+            dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          }
+        }
         let mvx = dx / dist, mvy = dy / dist;
 
         if (e.proto.orbit) {
@@ -609,7 +643,7 @@
           const k = U.clamp((dist - 140) / 160, 0, 1);
           mvx = mvx * k + tangentX * (1 - k * 0.55);
           mvy = mvy * k + tangentY * (1 - k * 0.55);
-          const n = Math.hypot(mvx, mvy) || 1;
+          const n = Math.sqrt(mvx * mvx + mvy * mvy) || 1;
           mvx /= n; mvy /= n;
         }
 
@@ -625,18 +659,30 @@
         e.face = Math.atan2(mvy, mvx);
 
         if (!e.isBoss) {
-          const cand = this.grid.query(e.x, e.y, e.r + 20, this._sepBuf);
-          for (let j = 0; j < cand.length; j++) {
-            const o = cand[j];
-            if (o === e || o.isBoss) continue;
-            const ox = e.x - o.x, oy = e.y - o.y;
-            const md = Math.hypot(ox, oy) || 0.001;
-            const minD = e.r + o.r;
-            if (md < minD) {
-              const push = (minD - md) / minD * sep;
-              const w = o.mass / (o.mass + e.mass);
-              e.x += (ox / md) * push * 60 * dt * (1 - w);
-              e.y += (oy / md) * push * 60 * dt * (1 - w);
+          /* 分离检测：直接走敌人自己所在格 + 8 邻格（插入时已记好 _cx/_cy）。
+             格子边长 72 > 最大分离半径(e.r+20 ≤ 62)，所以 3×3 邻域足够；
+             省掉每只敌人一次 grid.query 的 Math.floor ×2 与缓冲区清空/入栈，
+             并且只在真的重叠时才算 sqrt（原来每对邻居都要 hypot）。 */
+          const grid = this.grid, c = grid.cell;
+          const c0x = e._cx, c0y = e._cy;
+          for (let ax = c0x - 1; ax <= c0x + 1; ax++) {
+            for (let ay = c0y - 1; ay <= c0y + 1; ay++) {
+              const arr = grid.map.get(grid.key(ax, ay));
+              if (!arr) continue;
+              for (let j = 0; j < arr.length; j++) {
+                const o = arr[j];
+                if (o === e || o.isBoss) continue;
+                const ox = e.x - o.x, oy = e.y - o.y;
+                const minD = e.r + o.r;
+                const md2 = ox * ox + oy * oy;
+                if (md2 < minD * minD) {
+                  const md = Math.sqrt(md2) || 0.001;
+                  const push = (minD - md) / minD * sep;
+                  const w = o.mass / (o.mass + e.mass);
+                  e.x += (ox / md) * push * 60 * dt * (1 - w);
+                  e.y += (oy / md) * push * 60 * dt * (1 - w);
+                }
+              }
             }
           }
         }
@@ -659,11 +705,12 @@
           }
         }
 
-        if (dist < e.r + p.r) {
+        /* 接触伤害与离屏判定都用「到玩家的距离」：追击目标可能被召唤物吸引走 */
+        if (distP < e.r + p.r) {
           G.hurtPlayer(e.dmg, e);
         }
 
-        if (dist > Math.max(G.w, G.h) * 1.6 + 900) {
+        if (distP > Math.max(G.w, G.h) * 1.6 + 900) {
           if (e.isBoss) {
             const a = Math.random() * TAU;
             const d = Math.max(G.w, G.h) * 0.45;
@@ -672,7 +719,11 @@
             e.kx = 0; e.ky = 0;
           } else {
             e.hp = 0; e.dead = true;
-            L.splice(i, 1);
+            /* swap-remove：反向遍历时把尾元素换到当前位置并 pop，
+               避免 splice 在密集死亡时产生 O(n²) 的数组搬移 */
+            const last = L.length - 1;
+            L[i] = L[last];
+            L.pop();
           }
         }
       }
@@ -1225,11 +1276,11 @@
         }
         b.x += b.vx * dt;
         b.y += b.vy * dt;
-        if (b.life <= 0) { B.splice(i, 1); continue; }
+        if (b.life <= 0) { this.removeAt(B, i); continue; }
         if (U.dist2(b.x, b.y, p.x, p.y) < (b.r + p.r) * (b.r + p.r)) {
           G.hurtPlayer(b.dmg, null);
           FX.burst(b.x, b.y, b.color, 6, { speed: 90, life: 0.3, size: 2 });
-          B.splice(i, 1);
+          this.removeAt(B, i);
         }
       }
     },
@@ -1237,6 +1288,14 @@
     damage(G, e, amount, opts) {
       if (e.dead || e.hp <= 0) return false;
       opts = opts || {};
+
+      /* 群体输出预算：只对「玩家武器」的伤害生效（当前来源为空时不做限制，
+         例如技能伤害与敌方伤害）。超出令牌桶额度的部分直接裁掉。 */
+      const WP = global.Weapons;
+      if (WP && WP._src) {
+        amount = WP.charge(amount);
+        if (amount <= 0) return false;
+      }
 
       amount *= global.Effects.stateMul(e);
       if (e.vuln > 0) amount *= 1 + e.vuln;
@@ -1254,7 +1313,9 @@
       }
       e.hitFlash = 0.09;
       G.damageDone += amount;
-      Sfx.play('hit');
+      /* 命中音效按帧合并：后期每帧数百次命中，逐个调用会反复读 AudioContext.currentTime。
+         Sfx.play 自带节流，这里只是把它从「每次命中一次调用」降到「每帧一次」。 */
+      if (G.hitSfxT !== G.time) { G.hitSfxT = G.time; Sfx.play('hit'); }
 
       if (opts.knock) {
         const a = opts.angle !== undefined ? opts.angle : U.angle(G.player.x, G.player.y, e.x, e.y);
@@ -1264,11 +1325,13 @@
       }
       if (opts.slow) e.slowT = Math.max(e.slowT, opts.slow);
 
-      /* 伤害数字：掉帧时先降频（lean），极低画质直接关闭 */
-      const dp = FX.minimal ? 0 : (FX.lean ? 0.10 : 0.22);
-      if (dp > 0 && amount >= 1 && Math.random() < dp && FX.texts.length < 30) {
-        FX.text(e.x, e.y - e.r - 4, Math.round(amount), opts.crit ? '#ffd23c' : '#ffffff',
-          { size: opts.crit ? 17 : 13, life: 0.6 });
+      /* 伤害数字：先做便宜的数量上限/静默判断，再掷随机数（DOT 每帧结算走 silent） */
+      if (!opts.silent && amount >= 1 && FX.texts.length < 30) {
+        const dp = FX.minimal ? 0 : (FX.lean ? 0.10 : 0.22);
+        if (dp > 0 && Math.random() < dp) {
+          FX.text(e.x, e.y - e.r - 4, Math.round(amount), opts.crit ? '#ffd23c' : '#ffffff',
+            { size: opts.crit ? 17 : 13, life: 0.6 });
+        }
       }
       if (e.phase2) return false;
       return e.hp <= 0;
@@ -1282,7 +1345,13 @@
       }
       const L = this.list;
       if (index === undefined) index = L.indexOf(e);
-      if (index >= 0) L.splice(index, 1);
+      /* swap-remove（调用方都不依赖顺序：update 反向遍历自带索引，
+         useRoar 遍历的是 list.slice() 快照） */
+      if (index >= 0) {
+        const last = L.length - 1;
+        L[index] = L[last];
+        L.pop();
+      }
       e.dead = true;
 
       G.kills++;
@@ -1341,22 +1410,31 @@
       this.drawBullets(ctx);
     },
 
-    drawOne(ctx, e) {
-      const flash = e.hitFlash > 0;
+    /* 友方召唤物（蛊惑精英）复用同一套精灵缓存 */
+    spriteOf(e, flash) { return spriteFor(e, flash); },
+
+    drawOne(ctx, e) {      const flash = e.hitFlash > 0;
 
       if (e.isBoss) {
         drawBoss(ctx, e, flash);
         return;
       }
 
-      const sp = spriteFor(e, flash);
-      ctx.save();
+      /* 精灵缓存查表要拼 key 字符串，300+ 敌人时每帧 300 次字符串拼接；
+         精灵只由 (shape, r, color, elite, flash) 决定，直接在敌人身上缓存即可。
+         r 可能随阶段变化，所以连 r 一起比对。 */
+      let sp = flash ? e._sprF : e._spr;
+      if (!sp || e._sprR !== e.r) {
+        sp = spriteFor(e, flash);
+        e._sprR = e.r;
+        if (flash) e._sprF = sp; else e._spr = sp;
+      }      ctx.save();
       ctx.translate(e.x, e.y);
       ctx.rotate(e.face);
       ctx.drawImage(sp, -sp.width / 2, -sp.height / 2);
       ctx.restore();
 
-      if (e.hp < e.maxHp && e.r >= 14) {
+      if (e.hp < e.maxHp && e.r >= 14 && !(global.FX && global.FX.extreme)) {
         const w = e.r * 2;
         const hp = e.hp / e.maxHp;
         ctx.fillStyle = 'rgba(0,0,0,.55)';
@@ -1368,13 +1446,21 @@
 
     drawBullets(ctx) {
       const B = this.bullets;
-      /* 低画质时关掉逐弹发光（shadowBlur 是最贵的绘制开销之一） */
+      /* 低画质时关掉逐弹发光（shadowBlur 是最贵的绘制开销之一）；
+         极限档再省掉外层光晕与内层高光，每发只画一个圆 */
       const glow = (global.FX && global.FX.quality > 0.6);
+      const ext = !!(global.FX && global.FX.extreme);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < B.length; i++) {
         const b = B[i];
         ctx.fillStyle = b.frozen > 0 ? '#9b6bff' : b.color;
+        if (ext) {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r * 1.1, 0, TAU);
+          ctx.fill();
+          continue;
+        }
         if (glow) { ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12; }
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r * 1.5, 0, TAU);

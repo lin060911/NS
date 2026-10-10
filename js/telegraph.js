@@ -154,7 +154,7 @@
     },
 
     damageInCone(G, c) {
-      const list = global.Enemies.near(c.x + Math.cos(c.angle) * c.len / 2,
+      const list = global.Enemies.nearIn('tCone', c.x + Math.cos(c.angle) * c.len / 2,
         c.y + Math.sin(c.angle) * c.len / 2, c.len / 2 + 40);
       for (const e of list) {
         if (e.dead || e.hp <= 0 || e === c.follow) continue;
@@ -170,7 +170,7 @@
     },
 
     damageInLine(G, c) {
-      const list = global.Enemies.near(c.x + Math.cos(c.angle) * c.len / 2,
+      const list = global.Enemies.nearIn('tLine', c.x + Math.cos(c.angle) * c.len / 2,
         c.y + Math.sin(c.angle) * c.len / 2, c.len / 2 + 60);
       for (const e of list) {
         if (e.dead || e.hp <= 0 || e === c.follow) continue;
@@ -194,6 +194,16 @@
         FX.ring(p.x, p.y, '#ffffff', 10, 60, 0.3, 3);
         return;
       }
+      if (p.iceShield > 0) {
+        /* 冰晶防线：以整块护盾硬吃这次秒杀（与绝对零度同一个系统） */
+        p.iceShield = 0;
+        p.iceShieldT = 0;
+        FX.ring(p.x, p.y, '#7ad7ff', 16, 150, 0.5, 5);
+        FX.text(p.x, p.y - 34, '冰 晶 抵 挡', '#7ad7ff', { size: 17, life: 1 });
+        FX.addShake(8);
+        global.Sfx.play('chest');
+        return;
+      }
       if (p.bulwark > 0) {
         p.bulwark = 0;
         FX.ring(p.x, p.y, '#9b6bff', 16, 150, 0.5, 5);
@@ -207,7 +217,7 @@
 
     damageInCircle(G, c) {
       if (c.silent) return;
-      const list = global.Enemies.near(c.x, c.y, c.radius);
+      const list = global.Enemies.nearIn('tCircle', c.x, c.y, c.radius);
       for (const e of list) {
         if (e.dead || e.hp <= 0 || e === c.follow) continue;
         if (U.dist2(c.x, c.y, e.x, e.y) <= (c.radius + e.r) * (c.radius + e.r)) {

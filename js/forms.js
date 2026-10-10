@@ -67,7 +67,7 @@
           W().add({
             type: 'bolt', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: ((DEF.spec && DEF.spec.r) || 6) * zs, dmg: s.dmg * mul,
+            r: ((DEF.spec && DEF.spec.r) || 6) * zs, dmg: s.dmg * mul, dps: s.dps * mul,
             pierce: s.pierce, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'bolt',
@@ -95,7 +95,7 @@
           W().add({
             type: 'shard', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: ((DEF.spec && DEF.spec.r) || 8) * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
+            r: ((DEF.spec && DEF.spec.r) || 8) * zs, dmg: s.dmg * mul, dps: s.dps * mul, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: 'snow', spec: DEF.spec,
             life: 2.2, travel: 0, knock: s.knock
@@ -120,7 +120,7 @@
           W().add({
             type: 'grenade', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: 9 * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
+            r: 9 * zs, dmg: s.dmg * mul, dps: s.dps * mul, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'orb',
             trail: DEF.spec && DEF.spec.trail,
@@ -151,7 +151,7 @@
           W().add({
             type: 'dart', x: p.x, y: p.y,
             vx: Math.cos(aa) * s.speed, vy: Math.sin(aa) * s.speed,
-            r: ((DEF.spec && DEF.spec.r) || 10) * zs, dmg: s.dmg * mul, pierce: 0, hits: [],
+            r: ((DEF.spec && DEF.spec.r) || 10) * zs, dmg: s.dmg * mul, dps: s.dps * mul, pierce: 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'spore',
             spec: DEF.spec,
@@ -185,8 +185,8 @@
               angle: U.angle(cx, cy, cur.x, cur.y), knock: s.knock,
               crit: crit > 1, effects: DEF.effects
             });
-            global.Effects.onHit(G, cur, DEF.effects, final);
-            W().specHit(G, { spec: DEF.spec, color: DEF.color, effects: DEF.effects }, cur, final);
+            global.Effects.onHit(G, cur, DEF.effects, final, s.dps * cmul);
+            W().specHit(G, { spec: DEF.spec, color: DEF.color, effects: DEF.effects, dps: s.dps * cmul }, cur, final);
             cx = cur.x; cy = cur.y;
             cur = E().nearest(cx, cy, (s.range || 250) * 0.8, hit);
           }
@@ -201,16 +201,20 @@
       brief: '索敌标记',
       fire: function (G, w, s, DEF) {
         const p = G.player;
-        if (!E().nearest(p.x, p.y, W().searchR(G))) return;
+        const tgt0 = E().nearest(p.x, p.y, W().searchR(G));
+        if (!tgt0) return;
         const n = W().shotCount(s.count || 1);
+        /* 出生方向朝最近目标（旧版是随机角）：随机角有近一半时间浪费在"掉头"上，
+           而追踪弹的转向半径 = speed / turn（a09 是 1080/7 ≈ 154px），比交战距离还大。 */
+        const aim = U.angle(p.x, p.y, tgt0.x, tgt0.y);
         for (let i = 0; i < n; i++) {
-          const a = Math.random() * TAU;
+          const a = n > 1 ? aim + (i - (n - 1) / 2) * 0.14 : aim;
           const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
           W().add({
             type: 'seeker', x: p.x, y: p.y,
             vx: Math.cos(a) * s.speed * 0.4, vy: Math.sin(a) * s.speed * 0.4,
             speed: s.speed, turn: (DEF.spec && DEF.spec.turn) || 4.2, target: null,
-            r: ((DEF.spec && DEF.spec.r) || 7) * zs, dmg: s.dmg * mul,
+            r: ((DEF.spec && DEF.spec.r) || 7) * zs, dmg: s.dmg * mul, dps: s.dps * mul,
             pierce: s.pierce || 0, hits: [],
             effects: DEF.effects, color: DEF.color,
             shape: (DEF.spec && DEF.spec.shape) || 'seeker',
@@ -235,15 +239,15 @@
         for (let i = 0; i < n; i++) {
           const aa = a + (i - (n - 1) / 2) * 0.3;
           const mul = W().shotMul(s, i), zs = W().shotSize(s, i);
-          const w = (s.width || 14) * zs, dm = s.dmg * mul;
+          const w = (s.width || 14) * zs, dm = s.dmg * mul, dp = s.dps * mul;
           W().add({
             type: 'beam', x: p.x, y: p.y, a: aa,
-            w: w, len: s.len || 620, dmg: dm,
+            w: w, len: s.len || 620, dmg: dm, dps: dp,
             effects: DEF.effects, color: DEF.color, spec: DEF.spec,
             life: beamLife(s.cd), max: beamLife(s.cd), travel: 0, hits: [],
             vx: Math.cos(aa), vy: Math.sin(aa), r: 0, pierce: 999
           });
-          W().beamHit(G, p.x, p.y, aa, s.len || 620, w, dm, DEF, s.knock);
+          W().beamHit(G, p.x, p.y, aa, s.len || 620, w, dm, dp, DEF, s.knock);
         }
       }
     }

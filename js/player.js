@@ -216,6 +216,8 @@
         critChance: 0.15, critMul: 1.5,
         dmgMul: 0, cdMul: 1, areaMul: 0, amount: 0,
         invuln: 0, hurtFlash: 0,
+        /* 绝对零度的冰晶防线：50 点护盾池 + 持续时间（abilities.js 维护） */
+        iceShield: 0, iceShieldT: 0,
         facing: -Math.PI / 2,
         walk: 0,
         weapons: [],

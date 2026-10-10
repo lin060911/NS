@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>弹雨漫游 · 测试破解版</title>
+<link rel="icon" type="image/png" sizes="32x32" href="img.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   测试破解面板样式（只存在于 test.html，不触碰 css/style.css）
+   位置策略：右上角，右侧留出 84px 给游戏技能栏，顶部留 48px 给 HUD 顶栏，
+   底部留出空间给武器/被动 chip 栏，z-index 高于游戏所有 UI（最高 14）
+   ══════════════════════════════════════════════════════════════════════════ */
+.tp {
+  position: fixed; top: 48px; right: 84px;
+  width: 340px; max-height: calc(100vh - 146px);
+  display: flex; flex-direction: column;
+  z-index: 999;
+  font-family: ui-monospace, Consolas, Menlo, "Courier New", monospace;
+  font-size: 11.5px; line-height: 1.5; color: #cfd8ea;
+  background: rgba(9, 11, 18, .93);
+  border: 1px solid #2c3752; border-radius: 10px;
+  box-shadow: 0 12px 34px -12px rgba(0, 0, 0, .92), inset 0 1px 0 rgba(255, 255, 255, .06);
+  pointer-events: auto;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.tp.collapsed { width: auto; }
+.tp.collapsed .tp-body { display: none; }
+.tp.collapsed .tp-head { border-bottom: 0; }
+
+.tp-head { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-bottom: 1px solid #2c3752; }
+.tp-title { color: #8fe9ff; letter-spacing: .5px; font-size: 12px; }
+.tp-mini { margin-left: auto; color: #7f8ba5; font-size: 10.5px; white-space: nowrap; }
+.tp-fold {
+  font: inherit; cursor: pointer; padding: 0 5px; height: 18px; line-height: 16px;
+  border-radius: 5px; border: 1px solid #34405e; background: #161c2c; color: #9fb4d8;
+}
+.tp-fold:hover { border-color: #4d7fb0; color: #eaf3ff; }
+
+.tp-body { overflow-y: auto; overflow-x: hidden; padding: 6px 8px 8px; }
+.tp-body::-webkit-scrollbar { width: 8px; }
+.tp-body::-webkit-scrollbar-thumb { background: #2c3752; border-radius: 4px; }
+.tp-body::-webkit-scrollbar-track { background: transparent; }
+
+.tp-status {
+  background: #0d1220; border: 1px solid #22304d; border-radius: 6px;
+  padding: 4px 6px; color: #8fe9ff; margin-bottom: 5px; font-size: 10.5px;
+  word-break: break-all;
+}
+.tp-body details { border-top: 1px dashed #222c42; padding: 2px 0 4px; }
+.tp-body details:first-of-type { border-top: 0; }
+.tp-body summary { cursor: pointer; color: #9fb4d8; font-weight: 700; padding: 4px 0 2px; user-select: none; }
+.tp-body summary:hover { color: #d8ecff; }
+.tp-dim { color: #7f8ba5; font-weight: 400; }
+
+.tp-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 3px 0; }
+.tp-chk label {
+  display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
+  border: 1px solid #26314a; border-radius: 5px; padding: 1px 5px; background: #10151f;
+}
+.tp-lbl { color: #8fa3c8; }
+.tp-tiny { font-size: 10px; color: #8fa3c8; display: inline-flex; align-items: center; gap: 2px; }
+.tp-tiny input { margin: 0; }
+
+.tp-btn {
+  font: inherit; cursor: pointer; padding: 2px 7px; border-radius: 5px;
+  border: 1px solid #34405e; background: #161c2c; color: #cfd8ea;
+}
+.tp-btn:hover { border-color: #4d7fb0; color: #eaf3ff; }
+.tp-btn.on { border-color: #38f0ff; color: #8fe9ff; }
+.tp-btn:disabled { opacity: .38; cursor: not-allowed; }
+.tp-btn:active { transform: translateY(1px); }
+
+.tp-x, .tp-mini-btn {
+  font: inherit; cursor: pointer; padding: 0 4px; border-radius: 4px;
+  border: 1px solid #4a2a34; background: #201218; color: #ff8fa3; line-height: 16px;
+}
+.tp-mini-btn { border-color: #2b4a44; background: #101d1b; color: #7ce0c8; }
+.tp-x:hover { border-color: #ff4d6d; color: #fff; }
+.tp-mini-btn:hover { border-color: #38f0ff; color: #fff; }
+
+.tp-num {
+  font: inherit; width: 54px; padding: 1px 4px; border-radius: 5px;
+  border: 1px solid #34405e; background: #0d1220; color: #eaf3ff;
+}
+.tp-sel {
+  font: inherit; flex: 1 1 150px; min-width: 120px; padding: 1px 4px; border-radius: 5px;
+  border: 1px solid #34405e; background: #0d1220; color: #eaf3ff;
+}
+
+.tp-list { display: flex; flex-direction: column; gap: 2px; margin: 3px 0; }
+.tp-item { display: flex; align-items: center; gap: 4px; }
+.tp-name { flex: 0 0 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-rng { flex: 1 1 60px; min-width: 46px; height: 14px; margin: 0; }
+.tp-lv { flex: 0 0 36px; color: #ffd23c; font-size: 10.5px; }
+.tp-cd { flex: 0 0 62px; color: #7f8ba5; font-size: 10.5px; text-align: right; }
+.tp-tag {
+  flex: 0 0 16px; text-align: center; font-size: 10px; border-radius: 3px;
+  border: 1px solid #34405e; color: #9fb4d8;
+}
+.tp-t1 { border-color: #4a7f5c; color: #7ce0a0; }
+.tp-t2 { border-color: #4a6a9f; color: #8fb8ff; }
+.tp-t3 { border-color: #8a6a2a; color: #ffd23c; }
+
+.tp-stats { margin: 3px 0; }
+.tp-strow { display: flex; align-items: baseline; gap: 6px; padding: 1px 0; }
+.tp-stk { flex: 0 0 58px; color: #7f8ba5; }
+.tp-stv { color: #eaf3ff; }
+.tp-stv i { color: #7f8ba5; font-style: normal; margin-right: 2px; font-size: 10px; }
+.tp-stv + .tp-stv { border-left: 1px solid #222c42; padding-left: 6px; }
+
+.tp-foot { color: #5f6b84; font-size: 10px; padding-top: 6px; border-top: 1px dashed #222c42; }
+.tp-foot code { color: #8fe9ff; }
+
+/* 装 8 个技能时技能栏会变高：把间距压一点，保证不出屏 */
+.skill-bar { gap: 5px !important; }
+
+@media (max-width: 860px) {
+  .tp { left: 8px; right: auto; width: min(330px, 94vw); max-height: 58vh; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="bars">
+        <div class="hp-bar"><div id="hpFill" class="hp-fill"></div><span id="hpText">100 / 100</span></div>
+        <div class="xp-bar"><div id="xpFill" class="xp-fill"></div></div>
+      </div>
+      <div class="stats">
+        <div id="timer" class="timer">00:00</div>
+        <div class="mini"><span id="lvWrap">等级 <b id="lvNum">1</b></span><span id="rushWrap" class="hidden">领主 <b id="rushNum">1 / 10</b></span> · 击杀 <b id="killNum">0</b></div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div id="wpBar" class="chip-bar"></div>
+      <div id="psBar" class="chip-bar"></div>
+    </div>
+
+    <button id="btnPauseHud" class="pause-btn" aria-label="暂停">❚❚</button>
+
+    <div id="skillBar" class="skill-bar"></div>
+
+    <div id="bossWrap" class="boss-wrap hidden"></div>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <div id="screenMenu" class="screen">
+    <div class="panel menu-panel">
+      <h1 class="title">弹雨漫游</h1>
+      <div class="subtitle">测 试 破 解 版 &nbsp;·&nbsp; T E S T &nbsp; B U I L D</div>
+      <p class="desc">
+        本页是<strong>测试用破解版</strong>：右侧面板可自由切换场景预设、<br>
+        任意武器 / 被动 / 技能与作弊开关，并实时查看有效 DPS。<br>
+        <span class="dim">打开本页时会自动开始一局测试战斗。</span>
+      </p>
+      <div id="bestBox" class="best-box">最佳记录：--</div>
+
+      <button id="btnNewGame" class="btn primary">开 始 测 试（新 篇）</button>
+      <button id="btnBossRush" class="btn rush">领 主 挑 战</button>
+      <button id="btnHow" class="btn ghost">玩 法 说 明</button>
+    </div>
+  </div>
+
+  <div id="screenHow" class="screen hidden">
+    <div class="panel">
+      <h2 class="ph">玩法说明</h2>
+      <ul class="howto">
+        <li><b>战斗</b>　武器自动开火，走位躲避敌人攻击</li>
+        <li><b>升级</b>　每次升级可在获取弹珠 / 弹珠强化 / 被动强化里选择</li>
+        <li><b>合成</b>　同阶两颗即可合成：B + B → A | A + A → S</li>
+        <li><b>技能</b>　8 件 S 阶有专属大招，最多带 3 个（可暂停菜单「技能」页装配）</li>
+        <li><b>目标</b>　存活 15 分钟后击破最终领主</li>
+      </ul>
+      <button id="btnHowBack" class="btn primary">返 回</button>
+    </div>
+  </div>
+
+  <div id="screenLevel" class="screen hidden">
+    <div class="level-wrap">
+      <div id="levelTitle" class="level-title">强 化 协 议</div>
+      <div id="levelSub" class="level-sub">选一项加进你的系统</div>
+      <div id="cardBox" class="card-box"></div>
+      <div class="reroll-box">
+        <button id="btnLoadout" class="btn ghost small">▤ 武备</button>
+        <button id="btnBackKind" class="btn ghost small hidden">← 返回事件选择</button>
+        <button id="btnReroll" class="btn ghost small hidden">↻ 刷新选项（本次升级限一次）</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screenFusion" class="screen hidden">
+    <div class="level-wrap">
+      <div class="level-title">融 合 协 议</div>
+      <div class="level-sub">
+        <strong>同阶</strong>弹珠可合成
+      </div>
+
+      <div class="fusion-slots">
+        <div id="fslot0" class="fslot empty"><div class="fslot-hint">弹珠1</div></div>
+        <div class="fop">+</div>
+        <div id="fslot1" class="fslot empty"><div class="fslot-hint">弹珠2</div></div>
+        <div class="fop">→</div>
+        <div id="fslotOut" class="fslot result empty"><div class="fslot-hint">产物</div></div>
+      </div>
+
+      <div id="fusionList" class="card-box"></div>
+
+      <div class="fusion-actions">
+        <button id="btnFuse" class="btn primary">确 认 融 合</button>
+        <button id="btnFuseSkip" class="btn ghost">暂 不 融 合</button>
+      </div>
+      <div class="fusion-tip">
+        配方见暂停菜单<b>融合图鉴</b>
+      </div>
+    </div>
+  </div>
+
+  <div id="screenChest" class="screen hidden">
+    <div class="level-wrap">
+      <div class="level-title">领 主 宝 库</div>
+      <div class="level-sub">击败领主的馈赠 —— 三选一</div>
+      <div id="chestBox" class="card-box"></div>
+      <div class="reroll-box">
+        <button id="btnChestSkip" class="btn ghost small">放弃奖励</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screenLoadout" class="screen hidden loadout-screen">
+    <div class="panel loadout-panel">
+      <h2 class="ph">武 备</h2>
+      <div id="loadoutBox" class="tabpane"></div>
+      <button id="btnLoadoutClose" class="btn primary">返 回</button>
+    </div>
+  </div>
+
+  <div id="screenPause" class="screen hidden">
+    <div class="panel pause-panel">
+      <h2 class="ph">已 暂 停</h2>
+
+      <div class="tabs">
+        <button id="btn-tabStatus" class="tab active">状态</button>
+        <button id="btn-tabKeys" class="tab">键位</button>
+        <button id="btn-tabRules" class="tab">规则</button>
+        <button id="btn-tabBuild" class="tab">构筑</button>
+        <button id="btn-tabSkills" class="tab">技能</button>
+        <button id="btn-tabCodex" class="tab">融合图鉴</button>
+      </div>
+
+      <div id="tabStatus" class="tabpane">
+        <div id="pauseStats" class="pause-stats"></div>
+      </div>
+
+      <div id="tabKeys" class="tabpane hidden">
+        <div class="keys compact">
+          <div class="key-row"><span class="key">W A S D / 方向键</span><span class="ktxt">移动</span></div>
+          <div class="key-row"><span class="key">鼠标左键</span><span class="ktxt">按住时朝指针移动</span></div>
+          <div class="key-row"><span class="key">拖动轮盘</span><span class="ktxt">移动端移动</span></div>
+          <div class="key-row"><span class="key">SPACE</span><span class="ktxt">技能槽 1</span></div>
+          <div class="key-row"><span class="key">Q</span><span class="ktxt">技能槽 2</span></div>
+          <div class="key-row"><span class="key">E</span><span class="ktxt">技能槽 3</span></div>
+          <div class="key-row"><span class="key">R</span><span class="ktxt">祝福技能</span></div>
+          <div class="key-row"><span class="key">ESC / P</span><span class="ktxt">暂停 / 继续</span></div>
+          <div class="key-row"><span class="key">M</span><span class="ktxt">开关音效</span></div>
+          <div class="key-row"><span class="key">点按技能图标</span><span class="ktxt">手机端点击右侧技能即可释放，无需键盘</span></div>
+        </div>
+      </div>
+
+      <div id="tabRules" class="tabpane hidden">
+        <ul class="howto compact">
+          <li><b>索敌</b>　武器只锁定 <b>400px</b> 内的敌人，进入范围才会开火（领域类弹珠不受限制）</li>
+          <li><b>合成</b>　每 5 级 1 次机会，同阶可任意配对，产物等级为两颗材料之和</li>
+          <li><b>升级</b>　每次升级可在获取弹珠 / 弹珠强化 / 被动强化里选择</li>
+          <li><b>技能</b>　8 件 S 阶有专属大招，最多带 3 个（可暂停菜单「技能」页装配）</li>
+          <li><b>指向标</b>　领主在画面外时，屏幕边缘会出现三角指针并显示距离</li>
+          <li><b>目标</b>　存活 15 分钟后击破最终领主</li>
+        </ul>
+      </div>
+
+      <div id="tabBuild" class="tabpane hidden"></div>
+      <div id="tabSkills" class="tabpane hidden"></div>
+      <div id="tabCodex" class="tabpane hidden"></div>
+
+      <button id="btnResume" class="btn primary">继 续</button>
+      <button id="btnQuit" class="btn ghost">放 弃 本 局</button>
+    </div>
+  </div>
+
+  <div id="screenWin" class="screen hidden">
+    <div class="panel">
+      <h2 class="ph">通 关 达 成</h2>
+      <div id="winStats" class="over-stats"></div>
+      <p class="win-tip">
+        最终领主已被击溃。可以存档离开，也可以<strong class="danger">继续挑战</strong> ——
+        它会更强，且<strong class="danger">不会再倒下</strong>。
+      </p>
+      <button id="btnWinSave" class="btn primary">保 存 存 档</button>
+      <button id="btnWinEndless" class="btn ghost danger">继 续 挑 战 · 无 尽 模 式</button>
+      <button id="btnWinMenu" class="btn ghost">返 回 主 菜 单</button>
+    </div>
+  </div>
+
+  <div id="screenSaves" class="screen hidden loadout-screen">
+    <div class="panel loadout-panel">
+      <h2 class="ph" id="savesTitle">领 主 挑 战</h2>
+      <div class="saves-top">
+        <div id="savesTip" class="saves-tip">选择一个存档，携带其构筑进入挑战</div>
+        <button id="btnSavesManage" class="btn ghost small">编 辑</button>
+      </div>
+      <div id="savesBox" class="saves-box"></div>
+      <button id="btnSavesBack" class="btn primary">返 回</button>
+    </div>
+  </div>
+
+  <div id="screenSaveName" class="screen hidden">
+    <div class="panel">
+      <h2 class="ph">保 存 存 档</h2>
+      <p class="win-tip">为本次通关的构筑命名，最多保留 <b>10</b> 个存档</p>
+      <input id="saveNameInput" class="name-input" type="text" maxlength="16" placeholder="未命名存档">
+      <div id="saveNameErr" class="save-err hidden"></div>
+      <button id="btnSaveNameOk" class="btn primary">确 认 保 存</button>
+      <button id="btnSaveNameSkip" class="btn ghost">暂 不 保 存</button>
+    </div>
+  </div>
+
+  <div id="screenOver" class="screen hidden">
+    <div class="panel">
+      <h2 id="overTitle" class="ph">Game Over</h2>
+      <div id="overSub" class="level-sub"></div>
+      <div id="overStats" class="over-stats"></div>
+      <div id="overBest" class="best-box"></div>
+      <button id="btnAgain" class="btn primary">再 来 一 局</button>
+      <button id="btnMenu" class="btn ghost">返 回 主 菜 单</button>
+    </div>
+  </div>
+</div>
+
+<!-- 与 index.html 完全一致的脚本顺序；test.js 必须在最后 -->
+<script src="js/audio.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/balance.js"></script>
+<script src="js/input.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/telegraph.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/weapons2.js"></script>
+<script src="js/fusions.js"></script>
+<script src="js/abilities.js"></script>
+<script src="js/upgrades.js"></script>
+<script src="js/player.js"></script>
+<script src="js/saves.js"></script>
+<script src="js/game.js"></script>
+<script src="js/test.js"></script>
+</body>
+</html>

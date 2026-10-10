@@ -77,7 +77,9 @@
       for (const w of P.weapons) {
         const d = global.Weapons.defs[w.id];
         if (!d) continue;
-        s += d.baseDps * (POWER_TIER_K[d.tier] || 3) * w.level;
+        /* DMG/CD 模型下的「每秒伤害」当量：与旧版 baseDps 数值等价
+           （baseDmg / baseCd = 旧 baseDps），所以存档战力不会漂移。 */
+        s += (d.baseDmg / d.baseCd) * (POWER_TIER_K[d.tier] || 3) * w.level;
       }
       const ps = P.passives || {};
       s *= 1 + (P.dmgMul || 0) + (ps.power || 0) * 0.12 + (ps.crit || 0) * 0.05;
